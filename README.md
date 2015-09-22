@@ -1,17 +1,15 @@
 secp256k1 C library wrapped with CFFI to use with Python2 and PyPy2.
 
 
-Development
------------
+## Development
 
-``
+```
 python setup.py develop
-``
+```
 
 
-Install
--------
+## Install
 
-``
+```
 python setup.py install
-``
+```
