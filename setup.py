@@ -18,6 +18,7 @@ setup(
     url="https://github.com/czepluch/pysecp256k1",
     license="MIT",
     packages=find_packages(exclude=["_cffi_build", "_cffi_build/*"]),
+    package_data={'': ['libsecp256k1.so']},
     # ext_modules=[sha3],
     install_requires=["cffi>=1.2.1"],
     setup_requires=["cffi>=1.2.1"],
