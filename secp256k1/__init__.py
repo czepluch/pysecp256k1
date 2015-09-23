@@ -8,7 +8,7 @@ except ImportError:
     raise RuntimeError("Required CFFI extension not found. You need to install this package before use. See README.")
 
 try:
-    obj_name = glob(path.abspath(path.join(path.dirname(__file__), "libsecp*")))[0]
+    obj_name = glob(path.abspath(path.join(path.dirname(__file__), "libsecp256k1*")))[0]
 except RuntimeError:
     raise RuntimeError("Required secp2561 extension not found. You need to install this package before use. See README.")
 

@@ -3,9 +3,6 @@ import random
 random.seed(12312421412)
 from bitcoin import privtopub, encode_pubkey, ecdsa_raw_sign, ecdsa_raw_recover
 import time
-# import pyximport
-# pyximport.install()
-#from ecrecover import ecdsa_sign, ecdsa_verify, ecdsa_recover, test_big
 from secp256k1 import secp256k1_ecdsa_sign_compact, secp256k1_ecdsa_recover_compact
 
 priv = ''.join(chr(random.randint(0, 255)) for i in range(32))
