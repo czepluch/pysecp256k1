@@ -18,6 +18,9 @@ ffi.cdef('''
             # define SECP256K1_CONTEXT_VERIFY 0
             # define SECP256K1_CONTEXT_SIGN   1
 
+            /** Flag to pass to secp256k1_ec_pubkey_serialize and secp256k1_ec_privkey_export. */
+            # define SECP256K1_EC_COMPRESSED  0
+
             secp256k1_context* secp256k1_context_create(
               unsigned int flags
             );
@@ -33,11 +36,26 @@ ffi.cdef('''
 
             extern const secp256k1_nonce_function secp256k1_nonce_function_default;
 
+            int secp256k1_ecdsa_recoverable_signature_parse_compact(
+                const secp256k1_context* ctx,
+                secp256k1_ecdsa_recoverable_signature* sig,
+                const unsigned char *input64,
+                int recid
+            );
+
             int secp256k1_ecdsa_recoverable_signature_serialize_compact(
                 const secp256k1_context* ctx,
                 unsigned char *output64,
                 int *recid,
                 const secp256k1_ecdsa_recoverable_signature* sig
+            );
+
+            int secp256k1_ec_pubkey_serialize(
+                const secp256k1_context* ctx,
+                unsigned char *output,
+                size_t *outputlen,
+                const secp256k1_pubkey* pubkey,
+                unsigned int flags
             );
 
             int secp256k1_ecdsa_sign_recoverable(

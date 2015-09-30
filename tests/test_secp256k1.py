@@ -3,23 +3,19 @@ import random
 random.seed(12312421412)
 from bitcoin import privtopub, encode_pubkey, ecdsa_raw_sign, ecdsa_raw_recover
 import time
-from secp256k1 import secp256k1_ecdsa_sign, secp256k1_ecdsa_recover, secp256k1_ecdsa_recoverable_signature_serialize_compact
+from secp256k1 import secp256k1_ecdsa_sign, secp256k1_ecdsa_recover
 
 priv = ''.join(chr(random.randint(0, 255)) for i in range(32))
 pub = privtopub(priv)
 msg = ''.join(chr(random.randint(0, 255)) for i in range(32))
 vrs1 = ecdsa_raw_sign(msg, priv)
-vrs2 = secp256k1_ecdsa_sign(msg, priv) # sign
-sig = secp256k1_ecdsa_recoverable_signature_serialize_compact(vrs2) #with serialization
-print(sig.encode('hex'))
+vrs2 = secp256k1_ecdsa_sign(msg, priv)
 
 p1 = ecdsa_raw_recover(msg, vrs1)
-p2 = secp256k1_ecdsa_recover(msg, vrs2) #recover. Use sig to get serialization
-print(p2.encode('hex'))
-print(pub.encode('hex'))
-# assert p == p2
+p2 = secp256k1_ecdsa_recover(msg, vrs2)
+
 assert encode_pubkey(p1, 'bin') == pub
-# assert encode_pubkey(p2, 'bin') == pub
+assert encode_pubkey(p2, 'bin') == pub
 
 
 def test_ecrecover(rounds=100):
