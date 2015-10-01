@@ -3,7 +3,7 @@ import random
 random.seed(12312421412)
 from bitcoin import privtopub, encode_pubkey, ecdsa_raw_sign, ecdsa_raw_recover
 import time
-from secp256k1 import secp256k1_ecdsa_sign, secp256k1_ecdsa_recover
+from pysecp256k1 import secp256k1_ecdsa_sign, secp256k1_ecdsa_recover
 
 priv = ''.join(chr(random.randint(0, 255)) for i in range(32))
 pub = privtopub(priv)
