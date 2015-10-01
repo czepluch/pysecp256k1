@@ -2,7 +2,7 @@
 from cffi import FFI
 ffi = FFI()
 
-ffi.set_source("secp256k1._secp256k1", None)
+ffi.set_source("pysecp256k1._secp256k1", None)
 ffi.cdef('''
             typedef struct secp256k1_context_struct secp256k1_context;
 
