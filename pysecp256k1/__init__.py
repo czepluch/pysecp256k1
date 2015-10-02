@@ -10,7 +10,7 @@ except ImportError:
 try:
     obj_name = glob(path.abspath(path.join(path.dirname(__file__), "libsecp256k1*")))[0]
 except RuntimeError:
-    raise RuntimeError("Required secp2561 extension not found. You need to install this package before use. See README.")
+    raise RuntimeError("Required secp256k1 extension not found. You need to run 'python setup.py build' or se README")
 
 lib = ffi.dlopen(obj_name)
 

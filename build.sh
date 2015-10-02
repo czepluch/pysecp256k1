@@ -1,9 +1,9 @@
 #!/bin/bash
 
-cd ./webthree-helpers/utils/
-mkdir build
-cd build
-cmake ..
+cd secp256k1
+./autogen.sh
+./configure --enable-shared --enable-module-recovery
 make
-cd ../../..
-cp ./webthree-helpers/utils/build/secp256k1/libsecp256k1.so ./secp256k1/
+cp .libs/libsecp256k1.so ../pysecp256k1
+cd ..
+python setup.py install
