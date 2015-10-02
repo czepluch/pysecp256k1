@@ -6,4 +6,3 @@ cd secp256k1
 make
 cp .libs/libsecp256k1.so ../pysecp256k1
 cd ..
-python setup.py install
