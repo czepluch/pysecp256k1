@@ -8,7 +8,7 @@ cffi took: 1.09secs / 109μs per op  / 9170 recovers per sec
 ```
 
 ## Installation
-To clone this repo please use --recursive to include the needed submodule as shown below
+To clone this repo please use ´--recursive´ to include the needed submodule as shown below
 ```
 git clone --recursive https://github.com/czepluch/pysecp256k1.git
 ```
