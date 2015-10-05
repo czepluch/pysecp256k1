@@ -85,3 +85,13 @@ def secp256k1_ecdsa_recover(msg32, sig):
 
     buf = ffi.buffer(serialized_pubkey, 65)
     return buf[:]
+
+
+# Convert a signed key to a tuple
+def to_python_tuple(output):
+    buf = ffi.buffer(output, 65)
+    v = buf[64]
+    r = buf[:32]
+    s = buf[32:64]
+    vrs = long(v.encode('hex'), 16) + 27, long(r.encode('hex'), 16), long(s.encode('hex'), 16)
+    return vrs

@@ -4,6 +4,8 @@ clean-build:
 	rm -fr build/
 	rm -fr dist/
 	rm -fr *.egg-info
+	rm -fr pysecp256k1/*.so
+	rm -fr pysecp256k1/_secp256k1.py
 
 clean-pyc:
 	find . -name '*.pyc' -exec rm -f {} +
