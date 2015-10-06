@@ -19,7 +19,7 @@ setup(
     package_data={'': ['libsecp256k1.so']},
     install_requires=["cffi>=1.2.1"],
     setup_requires=["cffi>=1.2.1"],
-    cffi_modules=["_cffi_build/secp256k1_build.py:ffi"],
+    cffi_modules=["_cffi_build/pysecp256k1_build.py:ffi"],
     classifiers=[
         "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 2.7",
