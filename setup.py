@@ -9,7 +9,7 @@ class BitcoinSecpBuild(build):
 
 setup(
     name="pysecp256k1",
-    version='0.0.2',
+    version='0.0.3',
     description="secp256k1 wrapped with cffi to use with python",
     author="Jacob Stenum Czepluch",
     author_email="j.czepluch@gmail.com",
