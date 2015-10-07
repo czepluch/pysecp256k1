@@ -17,10 +17,6 @@ Clone repo::
 Development
 -----------
 
-To build package::
-
-    python setup.py build
-
 To install::
 
     python setup.py develop
@@ -28,10 +24,6 @@ To install::
 
 Install
 -------
-
-To build package::
-
-    python setup.py build
 
 To install package::
 
