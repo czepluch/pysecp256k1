@@ -3,7 +3,7 @@ from os import path
 import random
 
 try:
-    from ._pysecp256k1 import ffi
+    from ._secp256k1 import ffi
 except ImportError:
     raise RuntimeError("Required CFFI extension not found. You need to install this package before use. See README.")
 
