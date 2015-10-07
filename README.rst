@@ -9,7 +9,7 @@ These results are achieved on an Intel Core i5-4200U CPU @ 1.6GHz::
     cffi took: 1.09secs / 109μs per op  / 9170 recovers per sec
 
 Installation
------------
+------------
 Clone repo::
 
     git clone https://github.com/czepluch/pysecp256k1.git

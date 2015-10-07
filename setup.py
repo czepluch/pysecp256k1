@@ -1,21 +1,19 @@
-# from distutils.command.build import build
 from setuptools import setup, find_packages
 from subprocess import call
+from urllib2 import urlopen
 
-setup(install_requires=["requests>=2.8.0"])
 
 #  Fetching the bitcoin_secp256k1 tarball from github and running build.sh if success
-import requests
 bitcoin_secp256k1 = "https://github.com/bitcoin/secp256k1/tarball/master"
 print("\nDownloading tarball from " + bitcoin_secp256k1 + "...")
-r = requests.get(bitcoin_secp256k1)
-if r.status_code == 200:
+r = urlopen(bitcoin_secp256k1)
+if r.getcode() == 200:
     print("Successfully fetched the tarball :) ")
-    open('secp256k1.tar.gz', 'wb').write(r.content)
+    open('secp256k1.tar.gz', 'wb').write(r.read())
     call("./build.sh", shell=True)
 else:
     print("something went wrong while downloading " + bitcoin_secp256k1)
-    print(r.status_code)
+    print(r.getcode())
 
 
 setup(
