@@ -10,9 +10,9 @@ These results are achieved on an Intel Core i5-4200U CPU @ 1.6GHz::
 
 Installation
 -----------
-To clone this repo please use ´--recursive´ to include the needed submodule as shown below::
+Clone repo::
 
-    git clone --recursive https://github.com/czepluch/pysecp256k1.git
+    git clone https://github.com/czepluch/pysecp256k1.git
 
 Development
 -----------

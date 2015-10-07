@@ -1,3 +1,2 @@
 include _cffi_build/*.py
 include build.sh
-include secp256k1/*
