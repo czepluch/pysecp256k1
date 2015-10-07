@@ -1,11 +1,11 @@
 # from distutils.command.build import build
 from setuptools import setup, find_packages
 from subprocess import call
-import requests
 
 setup(install_requires=["requests>=2.8.0"])
 
 #  Fetching the bitcoin_secp256k1 tarball from github and running build.sh if success
+import requests
 bitcoin_secp256k1 = "https://github.com/bitcoin/secp256k1/tarball/master"
 print("\nDownloading tarball from " + bitcoin_secp256k1 + "...")
 r = requests.get(bitcoin_secp256k1)
