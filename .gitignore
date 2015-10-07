@@ -29,7 +29,7 @@ secp256k1/secp256k1.py
 
 # Bitcoin secp256k1 folder
 bitcoin-secp256k1*
-secp256k1.tar.gz
+*.tar.gz
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
