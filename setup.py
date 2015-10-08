@@ -28,6 +28,7 @@ setup(
     package_data={'': ['libsecp256k1.*']},
     install_requires=["cffi>=1.2.1"],
     setup_requires=["cffi>=1.2.1"],
+    tests_require=["bitcoin", "pytest"],
     cffi_modules=["_cffi_build/secp256k1_build.py:ffi"],
     classifiers=[
         "Programming Language :: Python :: 2",
