@@ -7,8 +7,8 @@ cd bitcoin-secp256k1* &&
 make &&
 unamestr=`uname`
 if [[ "$unamestr" == 'Linux' ]]; then
-    cp .libs/libsecp256k1.so ../pysecp256k1
+    cp .libs/libsecp256k1.so ../c_secp256k1
 elif [[ "$unamestr" == 'Darwin' ]]; then
-    cp .libs/libsecp256k1.0.dylib ../pysecp256k1
+    cp .libs/libsecp256k1.0.dylib ../c_secp256k1
 fi &&
 cd ..

@@ -34,7 +34,7 @@ else:
 
 
 setup(
-    name="secp256k1",
+    name="c_secp256k1",
     version='0.0.1',
     description="secp256k1 wrapped with cffi to use with python",
     author="Jacob Stenum Czepluch",
@@ -45,7 +45,7 @@ setup(
     package_data={'': ['libsecp256k1.*']},
     install_requires=["cffi>=1.2.1"],
     setup_requires=["cffi>=1.2.1"],
-    cffi_modules=["_cffi_build/secp256k1_build.py:ffi"],
+    cffi_modules=["_cffi_build/c_secp256k1_build.py:ffi"],
     classifiers=[
         "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 2.7",
