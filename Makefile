@@ -18,3 +18,6 @@ clean-pyc:
 test:
 	py.test
 
+release: clean
+	python setup.py sdist upload
+
