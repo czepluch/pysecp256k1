@@ -1,17 +1,18 @@
 from glob import glob
 from os import path
-from pyethereum.utils import zpad, int_to_big_endian
 import random
 
 try:
     from ._c_secp256k1 import ffi
 except ImportError:
-    raise RuntimeError("Required CFFI extension not found. You need to install this package before use. See README.")
+    raise RuntimeError(
+        "CFFI extension not found. You need to install this package before use. See README.")
 
 try:
     obj_name = glob(path.abspath(path.join(path.dirname(__file__), "libsecp256k1*")))[0]
 except RuntimeError:
-    raise RuntimeError("Required secp256k1 extension not found. You need to run 'python setup.py build' or se README")
+    raise RuntimeError(
+        "secp256k1 lib not found. You need to run 'python setup.py build' or see README")
 
 lib = ffi.dlopen(obj_name)
 
@@ -21,11 +22,28 @@ ctx = lib.secp256k1_context_create(3)
 ndata = ffi.new("unsigned char[]", ''.join(chr(random.randint(0, 255)) for i in range(32)))
 
 
-def secp256k1_ecdsa_sign(msg32, seckey):
+def int_to_big_endian(value):
+    cs = []
+    while value > 0:
+        cs.append(chr(value % 256))
+        value /= 256
+    s = ''.join(reversed(cs))
+    return s
+
+
+def big_endian_to_int(value):
+    return int(value.encode('hex'), 16)
+
+
+def ecdsa_sign_compact(msg32, seckey):
     """
         Takes a message of 32 bytes and a private key
         Returns a unsigned char array of length 65 containing the signed message
     """
+    assert isinstance(msg32, bytes)
+    assert isinstance(seckey, bytes)
+    assert len(msg32) == len(seckey) == 32
+
     # Make a recoverable signature of 65 bytes
     sig64 = ffi.new("secp256k1_ecdsa_recoverable_signature *")
 
@@ -51,21 +69,27 @@ def secp256k1_ecdsa_sign(msg32, seckey):
     )
 
     # Assign recid to the last byte in the output array
-    output64[64] = recid[0]
-    return output64
+    r = ffi.buffer(output64)[:64] + chr(recid[0])
+    assert len(r) == 65, len(r)
+    return r
 
 
-def secp256k1_ecdsa_recover(msg32, sig):
+def ecdsa_recover_compact(msg32, sig):
     """
      Takes the message of length 32 and the signed message
      Returns the public key of the private key from the sign function
     """
+    assert isinstance(msg32, bytes)
+    assert isinstance(sig, bytes)
+    assert len(msg32) == 32
+    assert len(sig) == 65
+
     # Setting the pubkey array
     pubkey = ffi.new("secp256k1_pubkey *")
     # Make a recoverable signature of 65 bytes
     rec_sig = ffi.new("secp256k1_ecdsa_recoverable_signature *")
     # Retrieving the recid from the last byte of the signed key
-    recid = sig[64]
+    recid = ord(sig[64])
 
     lib.secp256k1_ecdsa_recoverable_signature_parse_compact(
         ctx,
@@ -93,49 +117,39 @@ def secp256k1_ecdsa_recover(msg32, sig):
     )
 
     buf = ffi.buffer(serialized_pubkey, 65)
-    return buf[:]
+    r = buf[:]
+    assert isinstance(r, bytes)
+    assert len(r) == 65, len(r)
+    return r
 
 
-# Convert a signed key to a tuple
-def to_python_tuple(output):
-    """
-    Takes the output from the secp256k1_ecdsa_sign function 
-    Return a tuple  (v, r, s)
-    """
-    buf = ffi.buffer(output, 65)
-    v = buf[64]
-    r = buf[:32]
-    s = buf[32:64]
-    vrs = long(v.encode('hex'), 16) + 27, long(r.encode('hex'), 16), long(s.encode('hex'), 16)
-    return vrs
+def _lzpad32(x):
+    return '\x00' * (32 - len(x)) + x
 
 
-def from_python_tuple((v, r, s)):
-    """
-    Takes the tuple (v, r, s) and returns a unsigned char[65] array
-    """
-    # Assign 65 bytes to output
-    sig = ffi.new("unsigned char[65]")
-    sig[64] = #zpad doens't seem to work for length 1?
-    sig[:32] = zpad(int_to_big_endian(r), 32)
-    sig[32:64] = zpad(int_to_big_endian(s), 32)
-    return sig[:]
+def _encode_sig(v, r, s):
+    assert isinstance(v, (int, long))
+    assert v in (27, 28)
+    vb, rb, sb = chr(v - 27), int_to_big_endian(r), int_to_big_endian(s)
+    return _lzpad32(rb) + _lzpad32(sb) + vb
 
 
-# Function matching the signature that pyethereum already uses
+def _decode_sig(sig):
+    return ord(sig[64]) + 27, big_endian_to_int(sig[0:32]), big_endian_to_int(sig[32:64])
+
+
 def ecdsa_raw_sign(rawhash, key):
     """
      Takes a rawhash message and a private key and returns a tuple
      of the v, r, s values.
     """
-    output = secp256k1_ecdsa_sign(rawhash, key)
-    return to_python_tuple(output)
+    return _decode_sig(ecdsa_sign_compact(rawhash, key))
 
 
-def ecdsa_raw_recover(rawhash, (v, r, s)):
+def ecdsa_raw_recover(rawhash, vrs):
     """
      Takes a rawhash message of length 32 bytes and a (v, r, s) tuple
      Returns a public key for the private key used in the sign function
     """
-    vrs = from_python_tuple((v, r, s))
-    return ecdsa_raw_recover(rawhash, vrs)
+    assert len(vrs) == 3
+    return ecdsa_recover_compact(rawhash, _encode_sig(*vrs))

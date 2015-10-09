@@ -16,4 +16,5 @@ clean-pyc:
 	find . -name '__pycache__' -exec rm -fr {} +
 
 test:
-	py.test 
+	py.test
+
