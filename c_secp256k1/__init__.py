@@ -1,6 +1,6 @@
 from glob import glob
 from os import path
-# from ethereum.utils import zpad, int_to_big_endian
+from pyethereum.utils import zpad, int_to_big_endian
 import random
 
 try:
@@ -116,9 +116,9 @@ def from_python_tuple((v, r, s)):
     """
     # Assign 65 bytes to output
     sig = ffi.new("unsigned char[65]")
-    sig[64] = int(bytearray.fromhex('{:01x}'.format(v)))
-    sig[:32] = int(bytearray.fromhex('{:016x}'.format(r)))
-    sig[32:64] = int(bytearray.fromhex('{:016x}'.format(s)))
+    sig[64] = #zpad doens't seem to work for length 1?
+    sig[:32] = zpad(int_to_big_endian(r), 32)
+    sig[32:64] = zpad(int_to_big_endian(s), 32)
     return sig[:]
 
 
@@ -139,11 +139,3 @@ def ecdsa_raw_recover(rawhash, (v, r, s)):
     """
     vrs = from_python_tuple((v, r, s))
     return ecdsa_raw_recover(rawhash, vrs)
-
-
-
-
-
-
-
-
