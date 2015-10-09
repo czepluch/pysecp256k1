@@ -1,5 +1,6 @@
 from glob import glob
 from os import path
+# from ethereum.utils import zpad, int_to_big_endian
 import random
 
 try:
@@ -21,6 +22,10 @@ ndata = ffi.new("unsigned char[]", ''.join(chr(random.randint(0, 255)) for i in 
 
 
 def secp256k1_ecdsa_sign(msg32, seckey):
+    """
+        Takes a message of 32 bytes and a private key
+        Returns a unsigned char array of length 65 containing the signed message
+    """
     # Make a recoverable signature of 65 bytes
     sig64 = ffi.new("secp256k1_ecdsa_recoverable_signature *")
 
@@ -51,6 +56,10 @@ def secp256k1_ecdsa_sign(msg32, seckey):
 
 
 def secp256k1_ecdsa_recover(msg32, sig):
+    """
+     Takes the message of length 32 and the signed message
+     Returns the public key of the private key from the sign function
+    """
     # Setting the pubkey array
     pubkey = ffi.new("secp256k1_pubkey *")
     # Make a recoverable signature of 65 bytes
@@ -89,9 +98,52 @@ def secp256k1_ecdsa_recover(msg32, sig):
 
 # Convert a signed key to a tuple
 def to_python_tuple(output):
+    """
+    Takes the output from the secp256k1_ecdsa_sign function 
+    Return a tuple  (v, r, s)
+    """
     buf = ffi.buffer(output, 65)
     v = buf[64]
     r = buf[:32]
     s = buf[32:64]
     vrs = long(v.encode('hex'), 16) + 27, long(r.encode('hex'), 16), long(s.encode('hex'), 16)
     return vrs
+
+
+def from_python_tuple((v, r, s)):
+    """
+    Takes the tuple (v, r, s) and returns a unsigned char[65] array
+    """
+    # Assign 65 bytes to output
+    sig = ffi.new("unsigned char[65]")
+    sig[64] = int(bytearray.fromhex('{:01x}'.format(v)))
+    sig[:32] = int(bytearray.fromhex('{:016x}'.format(r)))
+    sig[32:64] = int(bytearray.fromhex('{:016x}'.format(s)))
+    return sig[:]
+
+
+# Function matching the signature that pyethereum already uses
+def ecdsa_raw_sign(rawhash, key):
+    """
+     Takes a rawhash message and a private key and returns a tuple
+     of the v, r, s values.
+    """
+    output = secp256k1_ecdsa_sign(rawhash, key)
+    return to_python_tuple(output)
+
+
+def ecdsa_raw_recover(rawhash, (v, r, s)):
+    """
+     Takes a rawhash message of length 32 bytes and a (v, r, s) tuple
+     Returns a public key for the private key used in the sign function
+    """
+    vrs = from_python_tuple((v, r, s))
+    return ecdsa_raw_recover(rawhash, vrs)
+
+
+
+
+
+
+
+
