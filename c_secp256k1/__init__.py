@@ -15,9 +15,9 @@ except ImportError as e:
 
 try:
     obj_name = glob(path.abspath(path.join(path.dirname(__file__), "libsecp256k1*")))[0]
-except RuntimeError:
+except Exception as e:
     raise ImportError(
-        "secp256k1 lib not found. You need to run 'python setup.py build' or see README")
+        "secp256k1 lib not found. You need to run 'python setup.py build' or see README %r" % e)
 
 lib = ffi.dlopen(obj_name)
 
