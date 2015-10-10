@@ -17,9 +17,7 @@ class PyTest(TestCommand):
         import pytest
         pytest.main(self.test_args)
 
-test_requirements = [
-    "bitcoin>=1.1.36", "pytest>=2.8.0", "tox>=2.1.1"
-]
+test_requirements = ["pytest>=2.8.0", "tox>=2.1.1"]
 
 #  Fetching the bitcoin_secp256k1 tarball from github and running build.sh if success
 url = "https://github.com/bitcoin/secp256k1/tarball/master"
@@ -34,7 +32,7 @@ else:
 
 setup(
     name="c_secp256k1",
-    version='0.0.1',
+    version='0.0.2',
     description="secp256k1 wrapped with cffi to use with python",
     author="Jacob Stenum Czepluch",
     author_email="j.czepluch@gmail.com",
@@ -42,7 +40,7 @@ setup(
     license="MIT",
     packages=find_packages(exclude=["_cffi_build", "_cffi_build/*"]),
     package_data={'': ['libsecp256k1.*']},
-    install_requires=["cffi>=1.2.1"],
+    install_requires=["cffi>=1.2.1", "bitcoin>=1.1.36"],
     setup_requires=["cffi>=1.2.1"],
     cffi_modules=["_cffi_build/c_secp256k1_build.py:ffi"],
     classifiers=[

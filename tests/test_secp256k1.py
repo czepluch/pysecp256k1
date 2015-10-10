@@ -1,45 +1,68 @@
 # -*- coding: utf-8 -*-
 import random
 random.seed(12312421412)
-from bitcoin import privtopub, encode_pubkey, ecdsa_raw_sign, ecdsa_raw_recover
+from bitcoin import privtopub, encode_pubkey
+from bitcoin import ecdsa_raw_sign as b_ecdsa_raw_sign
+from bitcoin import ecdsa_raw_recover as b_ecdsa_raw_recover
+from bitcoin import ecdsa_sign as b_ecdsa_sign_der
+from bitcoin import ecdsa_recover as b_ecdsa_recover_der
 import time
-from c_secp256k1 import ecdsa_recover_compact
-from c_secp256k1 import ecdsa_sign_compact
+from c_secp256k1 import ecdsa_recover_compact as c_ecdsa_recover_compact
+from c_secp256k1 import ecdsa_sign_compact as c_ecdsa_sign_compact
 from c_secp256k1 import ecdsa_raw_sign as c_ecdsa_raw_sign
 from c_secp256k1 import ecdsa_raw_recover as c_ecdsa_raw_recover
+from c_secp256k1 import ecdsa_sign_der as c_ecdsa_sign_der
+from c_secp256k1 import ecdsa_recover_der as c_ecdsa_recover_der
+
 
 priv = ''.join(chr(random.randint(0, 255)) for i in range(32))
 pub = privtopub(priv)
-msg = ''.join(chr(random.randint(0, 255)) for i in range(32))
-vrs1 = ecdsa_raw_sign(msg, priv)
-assert isinstance(vrs1, tuple)
-assert len(vrs1) == 3
+msg32 = ''.join(chr(random.randint(0, 255)) for i in range(32))
+msgN = ''.join(chr(random.randint(0, 255)) for i in range(128))
 
-vrs_compact = ecdsa_sign_compact(msg, priv)
-assert isinstance(vrs_compact, bytes)
-assert len(vrs_compact) == 65
-vrs3 = c_ecdsa_raw_sign(msg, priv)
 
-p1 = ecdsa_raw_recover(msg, vrs1)
-p2 = ecdsa_recover_compact(msg, vrs_compact)
-p3 = c_ecdsa_raw_recover(msg, vrs1)
-p4 = c_ecdsa_raw_recover(msg, vrs3)
-p5 = ecdsa_raw_recover(msg, vrs3)
+def test_raw():
+    vrs1 = b_ecdsa_raw_sign(msg32, priv)
+    assert isinstance(vrs1, tuple)
+    assert len(vrs1) == 3
+    vrs3 = c_ecdsa_raw_sign(msg32, priv)
+    p1 = b_ecdsa_raw_recover(msg32, vrs1)
+    p3 = c_ecdsa_raw_recover(msg32, vrs1)
+    p4 = c_ecdsa_raw_recover(msg32, vrs3)
+    p5 = b_ecdsa_raw_recover(msg32, vrs3)
 
-# Ensure that recovered pub key is the same
-assert encode_pubkey(p1, 'bin') == pub
-assert encode_pubkey(p2, 'bin') == pub
-assert encode_pubkey(p3, 'bin') == pub
-assert encode_pubkey(p4, 'bin') == pub
-assert encode_pubkey(p5, 'bin') == pub
+    # Ensure that recovered pub key is the same
+    assert encode_pubkey(p1, 'bin') == pub
+    assert encode_pubkey(p3, 'bin') == pub
+    assert encode_pubkey(p4, 'bin') == pub
+    assert encode_pubkey(p5, 'bin') == pub
+
+
+def test_compact():
+    vrs_compact = c_ecdsa_sign_compact(msg32, priv)
+    assert isinstance(vrs_compact, bytes)
+    assert len(vrs_compact) == 65
+    p3 = c_ecdsa_recover_compact(msg32, vrs_compact)
+    assert encode_pubkey(p3, 'bin') == pub
+
+
+def test_der():
+    vrs_der = c_ecdsa_sign_der(msgN, priv)
+    assert isinstance(vrs_der, bytes)
+    p3 = c_ecdsa_recover_der(msgN, vrs_der)
+    assert p3 == pub.encode('hex')
+    p2 = b_ecdsa_recover_der(msgN, vrs_der)
+    assert p2 == pub.encode('hex')
+
 
 # Recovery with pure python solution
 
 
 def test_ecrecover(rounds=100):
+    vrs1 = b_ecdsa_raw_sign(msg32, priv)
     st = time.time()
     for i in range(rounds):
-        p = ecdsa_raw_recover(msg, vrs1)
+        p = b_ecdsa_raw_recover(msg32, vrs1)
     elapsed = time.time() - st
     print 'py took: %.2fsecs / %dμs per op / %d recoveries per sec' % \
         (elapsed, elapsed / rounds * 10**6, rounds / elapsed)
@@ -47,9 +70,10 @@ def test_ecrecover(rounds=100):
 
 # Recovery with same random private key using cffi
 def test_cecrecover(rounds=100):
+    vrs_compact = c_ecdsa_sign_compact(msg32, priv)
     st = time.time()
     for i in range(rounds):
-        p = ecdsa_recover_compact(msg, vrs_compact)
+        p = c_ecdsa_recover_compact(msg32, vrs_compact)
     elapsed = time.time() - st
     print 'cffi took: %.2fsecs / %dμs per op  / %d recoveries per sec' % \
         (elapsed, elapsed / rounds * 10**6, rounds / elapsed)
@@ -67,7 +91,7 @@ def perf(rounds=1000):
     signatures = []
     st = time.time()
     for priv, msg in zip(privkeys, messages):
-        s = ecdsa_sign_compact(msg, priv)
+        s = c_ecdsa_sign_compact(msg32, priv)
         signatures.append(s)
     elapsed = time.time() - st
     print 'cffi took: %.2fsecs / %dμs per op  / %d signs per sec' % \
@@ -77,7 +101,7 @@ def perf(rounds=1000):
     pubs = []
     st = time.time()
     for sig, msg in zip(signatures, messages):
-        p = ecdsa_recover_compact(msg, sig)
+        p = c_ecdsa_recover_compact(msg32, sig)
         pubs.append(p)
     elapsed = time.time() - st
     print 'cffi took: %.2fsecs / %dμs per op  / %d recovers per sec' % \

@@ -1,17 +1,22 @@
 from glob import glob
 from os import path
 import random
+from bitcoin import electrum_sig_hash as _b_electrum_sig_hash
+from bitcoin import encode_pubkey as _b_encode_pubkey
+from bitcoin import ecdsa_raw_verify as _b_ecdsa_raw_verify
+from bitcoin import encode_sig as _b_encode_sig
+from bitcoin import decode_sig as _b_decode_sig
 
 try:
     from ._c_secp256k1 import ffi
-except ImportError:
-    raise RuntimeError(
-        "CFFI extension not found. You need to install this package before use. See README.")
+except ImportError as e:
+    raise ImportError(
+        "CFFI extension not found. You need to install this package before use. %r" % e)
 
 try:
     obj_name = glob(path.abspath(path.join(path.dirname(__file__), "libsecp256k1*")))[0]
 except RuntimeError:
-    raise RuntimeError(
+    raise ImportError(
         "secp256k1 lib not found. You need to run 'python setup.py build' or see README")
 
 lib = ffi.dlopen(obj_name)
@@ -21,8 +26,10 @@ ctx = lib.secp256k1_context_create(3)
 # arbitrary data used by the nonce generation function
 ndata = ffi.new("unsigned char[]", ''.join(chr(random.randint(0, 255)) for i in range(32)))
 
+# helpers
 
-def int_to_big_endian(value):
+
+def _int_to_big_endian(value):
     cs = []
     while value > 0:
         cs.append(chr(value % 256))
@@ -31,8 +38,26 @@ def int_to_big_endian(value):
     return s
 
 
-def big_endian_to_int(value):
+def _big_endian_to_int(value):
     return int(value.encode('hex'), 16)
+
+
+def _lzpad32(x):
+    return '\x00' * (32 - len(x)) + x
+
+
+def _encode_sig(v, r, s):
+    assert isinstance(v, (int, long))
+    assert v in (27, 28)
+    vb, rb, sb = chr(v - 27), _int_to_big_endian(r), _int_to_big_endian(s)
+    return _lzpad32(rb) + _lzpad32(sb) + vb
+
+
+def _decode_sig(sig):
+    return ord(sig[64]) + 27, _big_endian_to_int(sig[0:32]), _big_endian_to_int(sig[32:64])
+
+
+# compact encoding
 
 
 def ecdsa_sign_compact(msg32, seckey):
@@ -123,20 +148,7 @@ def ecdsa_recover_compact(msg32, sig):
     return r
 
 
-def _lzpad32(x):
-    return '\x00' * (32 - len(x)) + x
-
-
-def _encode_sig(v, r, s):
-    assert isinstance(v, (int, long))
-    assert v in (27, 28)
-    vb, rb, sb = chr(v - 27), int_to_big_endian(r), int_to_big_endian(s)
-    return _lzpad32(rb) + _lzpad32(sb) + vb
-
-
-def _decode_sig(sig):
-    return ord(sig[64]) + 27, big_endian_to_int(sig[0:32]), big_endian_to_int(sig[32:64])
-
+# raw encoding (v, r, s)
 
 def ecdsa_raw_sign(rawhash, key):
     """
@@ -153,3 +165,22 @@ def ecdsa_raw_recover(rawhash, vrs):
     """
     assert len(vrs) == 3
     return ecdsa_recover_compact(rawhash, _encode_sig(*vrs))
+
+
+def ecdsa_raw_verify(msg32, sig, pub):  # FIXME create wrapper
+    return _b_ecdsa_raw_verify(msg32, sig, pub)
+
+
+# DER encoding
+
+def ecdsa_sign_der(msg, seckey):
+    return _b_encode_sig(*ecdsa_raw_sign(_b_electrum_sig_hash(msg), seckey))
+
+
+def ecdsa_recover_der(msg, sig):
+    return _b_encode_pubkey(ecdsa_raw_recover(_b_electrum_sig_hash(msg), _b_decode_sig(sig)),
+                            'hex')
+
+
+def ecdsa_verify_der(msg, sig, pub):
+    return ecdsa_raw_verify(_b_electrum_sig_hash(msg), _b_decode_sig(sig), pub)
