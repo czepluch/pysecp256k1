@@ -148,6 +148,40 @@ def ecdsa_recover_compact(msg32, sig):
     return r
 
 
+def ecdsa_verify_compact(msg32, sig, pub):
+    """
+    Takes the message of length 32 and the signed message and the pubkey
+    Returns True if the signature is valid
+    """
+    assert isinstance(msg32, bytes)
+    assert isinstance(sig, bytes)
+    assert len(msg32) == 32
+    assert len(sig) == 65
+    assert len(pub) == 65
+
+    # Setting the pubkey array
+    pubkey = ffi.new("secp256k1_pubkey *")
+    c_sig = ffi.new("secp256k1_ecdsa_signature *")
+    b = ffi.buffer(c_sig, 65)
+    b[:] = sig
+
+    lib.secp256k1_ec_pubkey_parse(
+        ctx,        # const secp256k1_context*
+        pubkey,     # secp256k1_pubkey*
+        pub,        # const unsigned char
+        len(pub)    # size_t
+    )
+
+    is_valid = lib.secp256k1_ecdsa_verify(
+        ctx,
+        c_sig,  # const secp256k1_ecdsa_signature
+        msg32,  # const unsigned char
+        pubkey  # const secp256k1_pubkey
+    )
+    print "verify returned", is_valid
+    return is_valid == 1
+
+
 # raw encoding (v, r, s)
 
 def ecdsa_raw_sign(rawhash, key):

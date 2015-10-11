@@ -9,7 +9,9 @@ from bitcoin import ecdsa_recover as b_ecdsa_recover_der
 import time
 from c_secp256k1 import ecdsa_recover_compact as c_ecdsa_recover_compact
 from c_secp256k1 import ecdsa_sign_compact as c_ecdsa_sign_compact
+from c_secp256k1 import ecdsa_verify_compact as c_ecdsa_verify_compact
 from c_secp256k1 import ecdsa_raw_sign as c_ecdsa_raw_sign
+from c_secp256k1 import ecdsa_raw_verify as c_ecdsa_raw_verify
 from c_secp256k1 import ecdsa_raw_recover as c_ecdsa_raw_recover
 from c_secp256k1 import ecdsa_sign_der as c_ecdsa_sign_der
 from c_secp256k1 import ecdsa_recover_der as c_ecdsa_recover_der
@@ -43,7 +45,19 @@ def test_compact():
     assert isinstance(vrs_compact, bytes)
     assert len(vrs_compact) == 65
     p3 = c_ecdsa_recover_compact(msg32, vrs_compact)
+
     assert encode_pubkey(p3, 'bin') == pub
+    assert c_ecdsa_verify_compact(msg32, vrs_compact, p3)
+
+    # check wrong pub
+    p4 = c_ecdsa_recover_compact(msg32, 'x' + vrs_compact[1:])
+    assert encode_pubkey(p4, 'bin') != pub
+    assert not c_ecdsa_verify_compact(msg32, vrs_compact, p4)
+
+
+def test_robustness():
+    vrs_compact = c_ecdsa_sign_compact(msg32, priv)
+    p3 = c_ecdsa_recover_compact(msg32, vrs_compact[:-1] + 'x')  # should not segfault
 
 
 def test_der():

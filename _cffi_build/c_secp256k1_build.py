@@ -14,6 +14,10 @@ ffi.cdef('''
                 unsigned char data[64];
             } secp256k1_pubkey;
 
+            typedef struct {
+                unsigned char data[64];
+            } secp256k1_ecdsa_signature;
+
             /** Flags to pass to secp256k1_context_create. */
             # define SECP256K1_CONTEXT_VERIFY 0
             # define SECP256K1_CONTEXT_SIGN   1
@@ -50,6 +54,13 @@ ffi.cdef('''
                 const secp256k1_ecdsa_recoverable_signature* sig
             );
 
+            int secp256k1_ec_pubkey_parse(
+                const secp256k1_context* ctx,
+                secp256k1_pubkey* pubkey,
+                const unsigned char *input,
+                size_t inputlen
+            );
+
             int secp256k1_ec_pubkey_serialize(
                 const secp256k1_context* ctx,
                 unsigned char *output,
@@ -73,6 +84,14 @@ ffi.cdef('''
               const secp256k1_ecdsa_recoverable_signature *sig,
               const unsigned char *msg32
             );
+
+            int secp256k1_ecdsa_verify(
+              const secp256k1_context* ctx,
+              const secp256k1_ecdsa_signature *sig,
+              const unsigned char *msg32,
+              const secp256k1_pubkey *pubkey
+            );
+
          ''')
 
 if __name__ == '__main__':
