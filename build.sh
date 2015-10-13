@@ -11,5 +11,4 @@ if [[ "$unamestr" == 'Linux' ]]; then
 elif [[ "$unamestr" == 'Darwin' ]]; then
     cp .libs/libsecp256k1.0.dylib ../c_secp256k1
 fi &&
-python _cffi_build/c_secp256k1_build.py &&
 cd ..
