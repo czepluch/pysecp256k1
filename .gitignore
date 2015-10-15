@@ -29,7 +29,7 @@ var/
 c_secp256k1/_c_secp256k1.py
 
 # Bitcoin secp256k1 folder
-bitcoin-secp256k1*
+lib-secp256k1
 *.tar.gz
 
 # PyInstaller
