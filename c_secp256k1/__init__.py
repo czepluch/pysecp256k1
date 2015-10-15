@@ -101,8 +101,8 @@ def ecdsa_sign_compact(msg32, seckey):
 
 def ecdsa_recover_compact(msg32, sig):
     """
-     Takes the message of length 32 and the signed message
-     Returns the public key of the private key from the sign function
+        Takes the message of length 32 and the signed message
+        Returns the public key of the private key from the sign function
     """
     assert isinstance(msg32, bytes)
     assert isinstance(sig, bytes)
@@ -150,8 +150,8 @@ def ecdsa_recover_compact(msg32, sig):
 
 def ecdsa_verify_compact(msg32, sig, pub):
     """
-    Takes the message of length 32 and the signed message and the pubkey
-    Returns True if the signature is valid
+        Takes the message of length 32 and the signed message and the pubkey
+        Returns True if the signature is valid
     """
     assert isinstance(msg32, bytes)
     assert isinstance(sig, bytes)
@@ -186,16 +186,16 @@ def ecdsa_verify_compact(msg32, sig, pub):
 
 def ecdsa_raw_sign(rawhash, key):
     """
-     Takes a rawhash message and a private key and returns a tuple
-     of the v, r, s values.
+        Takes a rawhash message and a private key and returns a tuple
+        of the v, r, s values.
     """
     return _decode_sig(ecdsa_sign_compact(rawhash, key))
 
 
 def ecdsa_raw_recover(rawhash, vrs):
     """
-     Takes a rawhash message of length 32 bytes and a (v, r, s) tuple
-     Returns a public key for the private key used in the sign function
+        Takes a rawhash message of length 32 bytes and a (v, r, s) tuple
+        Returns a public key for the private key used in the sign function
     """
     assert len(vrs) == 3
     return ecdsa_recover_compact(rawhash, _encode_sig(*vrs))
