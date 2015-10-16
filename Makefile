@@ -31,7 +31,7 @@ clean-test:
 	rm -rf .tox/
 
 test:
-	py.test
+	cd tests; py.test
 
 release: clean
 	python setup.py sdist bdist_wheel upload

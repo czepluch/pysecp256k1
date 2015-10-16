@@ -1,5 +1,5 @@
 from distutils import log
-from distutils.spawn import spawn
+from distutils.file_util import copy_file
 from glob import glob
 import os
 import shutil
@@ -12,6 +12,8 @@ from setuptools.command.test import test as TestCommand
 from distutils.command.build_ext import build_ext as distutils_build_ext
 from setuptools.dist import Distribution
 
+
+PACKAGE_NAME = "c_secp256k1"
 
 TARBALL_URL = "https://github.com/bitcoin/secp256k1/tarball/master"
 
@@ -27,8 +29,7 @@ class PyTest(TestCommand):
 
     def run_tests(self):
         # import here, cause outside the eggs aren't loaded
-        import pytest
-        pytest.main(self.test_args)
+        self.spawn(['tox'])
 
 test_requirements = ["pytest>=2.8.0", "tox>=2.1.1"]
 
@@ -73,13 +74,28 @@ class BuildExt(distutils_build_ext):
 
     def build_library(self):
         self.announce("building secp256k1 library", level=log.INFO)
-        spawn(['sh', '-c', 'cd {}; ./autogen.sh'.format(LIB_SECP256K1_DIR)])
-        spawn(['sh', '-c', 'cd {}; ./configure --enable-shared --enable-module-recovery'.format(LIB_SECP256K1_DIR)])
-        spawn(['sh', '-c', 'cd {}; make'.format(LIB_SECP256K1_DIR)])
-        spawn(['find'])
-        libs = glob(os.path.join(LIB_SECP256K1_DIR, ".libs", "libsecp256k1*"))
-        self.announce(libs)
-        shutil.copy(libs[0], "c_secp256k1/")
+        self.spawn(['sh', '-c', 'cd {libdir}; ./autogen.sh'])
+        self.spawn(['sh', '-c', 'cd {libdir}; ./configure --enable-shared --enable-module-recovery'])
+        self.spawn(['sh', '-c', 'cd {libdir}; make'])
+        if not self.dry_run:
+            lib = next(
+                lib
+                for lib in glob(os.path.join(LIB_SECP256K1_DIR, ".libs", "libsecp256k1*"))
+                if lib.rpartition('.')[2] in ('so', 'dylib', 'dll', 'pyd')
+            )
+            build_py = self.get_finalized_command('build_py')
+            dst = os.path.join(
+                os.path.join(
+                    build_py.build_lib,
+                    build_py.get_package_dir(PACKAGE_NAME)
+                ),
+                os.path.basename(lib)
+            )
+            copy_file(lib, dst, verbose=self.verbose, dry_run=self.dry_run)
+
+    def spawn(self, cmd, search_path=1, level=1):
+        cmd = [c.format(libdir=LIB_SECP256K1_DIR) for c in cmd]
+        distutils_build_ext.spawn(self, cmd, search_path, level)
 
 
 class HasExtensionsDistribution(Distribution):
@@ -91,7 +107,7 @@ class HasExtensionsDistribution(Distribution):
 
 
 setup(
-    name="c_secp256k1",
+    name=PACKAGE_NAME,
     version='0.0.3',
     description="secp256k1 wrapped with cffi to use with python",
     author="Jacob Stenum Czepluch",
