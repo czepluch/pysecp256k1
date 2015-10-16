@@ -171,19 +171,12 @@ def ecdsa_verify_compact(msg32, rsig, pub):
         Returns True if the signature is valid
     """
     assert isinstance(msg32, bytes)
-    # assert isinstance(rsig, bytes)
     assert len(msg32) == 32
-    # assert len(rsig) == 65
     assert len(pub) == 65
 
     # Setting the pubkey array
     pubkey = ffi.new("secp256k1_pubkey *")
     c_sig = ffi.new("secp256k1_ecdsa_signature *")
-    # sigin = ffi.new("secp256k1_ecdsa_recoverable_signature *")
-
-    # set the sigin recoverable signature to be the sig from recover
-    # b = ffi.buffer(sigin, 65)
-    # b[:] = rsig
 
     # converst the recoverable signature to a signature
     lib.secp256k1_ecdsa_recoverable_signature_convert(
