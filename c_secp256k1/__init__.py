@@ -60,7 +60,7 @@ def _decode_sig(sig):
 # compact encoding
 
 
-def ecdsa_sign_compact(msg32, seckey):
+def ecdsa_sign_recoverable(msg32, seckey):
     """
         Takes a message of 32 bytes and a private key
         Returns a unsigned char array of length 65 containing the signed message
@@ -80,7 +80,10 @@ def ecdsa_sign_compact(msg32, seckey):
         ffi.addressof(lib, "secp256k1_nonce_function_default"),
         ndata,
     )
+    return sig64
 
+
+def ecdsa_sign_compact(msg32, seckey):
     # Assign 65 bytes to output
     output64 = ffi.new("unsigned char[65]")
     # ffi definition of recid
@@ -90,13 +93,26 @@ def ecdsa_sign_compact(msg32, seckey):
         ctx,
         output64,
         recid,
-        sig64
+        ecdsa_sign_recoverable(msg32, seckey)
     )
 
     # Assign recid to the last byte in the output array
     r = ffi.buffer(output64)[:64] + chr(recid[0])
     assert len(r) == 65, len(r)
     return r
+
+
+def verify_and_create_pubkey(seckey):
+    # Validate seckey
+    valid_sec = lib.secp256k1_ec_seckey_verify(ctx, seckey)
+    assert valid_sec == 1
+
+    # ccompute public key for a secret key
+    pubkey = ffi.new("secp256k1_pubkey *")
+    valid_pub = lib.secp256k1_ec_pubkey_create(ctx, pubkey, seckey)
+    assert valid_pub == 1
+
+    return pubkey
 
 
 def ecdsa_recover_compact(msg32, sig):
@@ -149,29 +165,31 @@ def ecdsa_recover_compact(msg32, sig):
     return r
 
 
-def ecdsa_verify_compact(msg32, sig, pub):
+def ecdsa_verify_compact(msg32, rsig, pub):
     """
         Takes the message of length 32 and the signed message and the pubkey
         Returns True if the signature is valid
     """
     assert isinstance(msg32, bytes)
-    assert isinstance(sig, bytes)
+    # assert isinstance(rsig, bytes)
     assert len(msg32) == 32
-    assert len(sig) == 65
+    # assert len(rsig) == 65
     assert len(pub) == 65
 
     # Setting the pubkey array
     pubkey = ffi.new("secp256k1_pubkey *")
     c_sig = ffi.new("secp256k1_ecdsa_signature *")
-    sigin = ffi.new("secp256k1_ecdsa_recoverable_signature *")
+    # sigin = ffi.new("secp256k1_ecdsa_recoverable_signature *")
 
-    b = ffi.buffer(sigin, 65)
-    b[:] = sig
+    # set the sigin recoverable signature to be the sig from recover
+    # b = ffi.buffer(sigin, 65)
+    # b[:] = rsig
 
+    # converst the recoverable signature to a signature
     lib.secp256k1_ecdsa_recoverable_signature_convert(
         ctx,
         c_sig,
-        sigin
+        rsig
     )
 
     lib.secp256k1_ec_pubkey_parse(

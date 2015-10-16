@@ -97,6 +97,17 @@ ffi.cdef('''
               secp256k1_ecdsa_signature* sig,
               const secp256k1_ecdsa_recoverable_signature* sigin
             );
+
+            int secp256k1_ec_pubkey_create(
+              const secp256k1_context* ctx,
+              secp256k1_pubkey *pubkey,
+              const unsigned char *seckey
+            );
+
+            int secp256k1_ec_seckey_verify(
+              const secp256k1_context* ctx,
+              const unsigned char *seckey
+            );
          ''')
 
 if __name__ == '__main__':
