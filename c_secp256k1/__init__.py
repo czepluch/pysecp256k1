@@ -124,7 +124,8 @@ def ecdsa_recover_compact(msg32, sig):
     assert isinstance(sig, bytes)
     assert len(msg32) == 32
     assert len(sig) == 65
-    if not (_big_endian_to_int(sig[64]) >= 0 and _big_endian_to_int(sig[64]) <= 3):
+    if not (_big_endian_to_int(sig[64]) >= 0 and
+            _big_endian_to_int(sig[64]) <= 3):
         print("Recid must be 1, 2, 3 or 4")
         return
 
