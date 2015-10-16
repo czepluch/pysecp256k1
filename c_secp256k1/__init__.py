@@ -108,6 +108,7 @@ def ecdsa_recover_compact(msg32, sig):
     assert isinstance(sig, bytes)
     assert len(msg32) == 32
     assert len(sig) == 65
+    assert _big_endian_to_int(sig[64]) >= 0 and _big_endian_to_int(sig[64]) <= 3
 
     # Setting the pubkey array
     pubkey = ffi.new("secp256k1_pubkey *")
@@ -162,8 +163,16 @@ def ecdsa_verify_compact(msg32, sig, pub):
     # Setting the pubkey array
     pubkey = ffi.new("secp256k1_pubkey *")
     c_sig = ffi.new("secp256k1_ecdsa_signature *")
-    b = ffi.buffer(c_sig, 65)
+    sigin = ffi.new("secp256k1_ecdsa_recoverable_signature *")
+
+    b = ffi.buffer(sigin, 65)
     b[:] = sig
+
+    lib.secp256k1_ecdsa_recoverable_signature_convert(
+        ctx,
+        c_sig,
+        sigin
+    )
 
     lib.secp256k1_ec_pubkey_parse(
         ctx,        # const secp256k1_context*
