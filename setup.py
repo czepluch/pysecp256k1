@@ -1,8 +1,21 @@
-import sys
+from distutils import log
+from distutils.spawn import spawn
+from glob import glob
+import os
+import shutil
+import tarfile
+from cStringIO import StringIO
 from setuptools import setup, find_packages
-from subprocess import call
-from urllib2 import urlopen
+from urllib2 import urlopen, URLError
+from setuptools.command.sdist import sdist
 from setuptools.command.test import test as TestCommand
+from distutils.command.build_ext import build_ext as distutils_build_ext
+from setuptools.dist import Distribution
+
+
+TARBALL_URL = "https://github.com/bitcoin/secp256k1/tarball/master"
+
+LIB_SECP256K1_DIR = "lib-secp256k1"
 
 
 class PyTest(TestCommand):
@@ -19,16 +32,63 @@ class PyTest(TestCommand):
 
 test_requirements = ["pytest>=2.8.0", "tox>=2.1.1"]
 
-#  Fetching the bitcoin_secp256k1 tarball from github and running build.sh if success
-url = "https://github.com/bitcoin/secp256k1/tarball/master"
-r = urlopen(url)
-if r.getcode() == 200:
-    open('secp256k1.tar.gz', 'wb').write(r.read())
-    call("./build.sh", shell=True)
-else:
-    print("error while downloading " + url)
-    print(r.getcode())
-    sys.exit(1)
+
+def download_library(command):
+    if command.dry_run:
+        return
+    if os.path.exists(os.path.join(LIB_SECP256K1_DIR, "Makefile")):
+        # Library directory has been used. Throw away.
+        shutil.rmtree(LIB_SECP256K1_DIR)
+    if not os.path.exists(LIB_SECP256K1_DIR):
+        command.announce("downloading secp256k1 library", level=log.INFO)
+        try:
+            r = urlopen(TARBALL_URL)
+            if r.getcode() == 200:
+                content = StringIO(r.read())
+                content.seek(0)
+                with tarfile.open(fileobj=content) as tf:
+                    dirname = tf.getnames()[0].partition('/')[0]
+                    tf.extractall()
+                shutil.move(dirname, LIB_SECP256K1_DIR)
+            else:
+                raise SystemExit("Unable to download secp256k1 library: HTTP-Status: %d", r.getcode())
+        except URLError as ex:
+            raise SystemExit("Unable to download secp256k1 library: %s", ex.message)
+
+
+class SDist(sdist):
+    def run(self):
+        download_library(self)
+        sdist.run(self)
+
+
+class BuildExt(distutils_build_ext):
+    def run(self):
+        # Normally the library should have been downloaded during `sdist`.
+        # In case of `develop` however this might not have happened.
+        download_library(self)
+
+        self.build_library()
+        distutils_build_ext.run(self)
+
+    def build_library(self):
+        self.announce("building secp256k1 library", level=log.INFO)
+        spawn(['sh', '-c', 'cd {}; ./autogen.sh'.format(LIB_SECP256K1_DIR)])
+        spawn(['sh', '-c', 'cd {}; ./configure --enable-shared --enable-module-recovery'.format(LIB_SECP256K1_DIR)])
+        spawn(['sh', '-c', 'cd {}; make'.format(LIB_SECP256K1_DIR)])
+        spawn(['find'])
+        libs = glob(os.path.join(LIB_SECP256K1_DIR, ".libs", "libsecp256k1*"))
+        self.announce(libs)
+        shutil.copy(libs[0], "c_secp256k1/")
+
+
+class HasExtensionsDistribution(Distribution):
+    def has_ext_modules(self):
+        # Even though we don't use the regular setuptools extension
+        # mechanism we want setuptools to think so because we need to
+        # build platform specific wheels.
+        return True
+
 
 setup(
     name="c_secp256k1",
@@ -48,8 +108,13 @@ setup(
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: Implementation :: PyPy"
     ],
-    cmdclass={'test': PyTest},
+    cmdclass={
+        'sdist': SDist,
+        'build_ext': BuildExt,
+        'test': PyTest
+    },
+    distclass=HasExtensionsDistribution,
+    ext_modules=[],  # Don't remove. This is needed to generate correct wheels.
     tests_require=test_requirements,
     zip_safe=False,
-
 )

@@ -11,13 +11,15 @@ help:
 clean: clean-build clean-pyc
 
 clean-build:
-	rm -fr build/
-	rm -fr dist/
-	rm -fr *.egg-info
-	rm -fr c_secp256k1/*.so
-	rm -fr c_secp256k1/_c_secp256k1.py
-	rm -rf bitcoin-secp256k1-*
-	rm -f secp256k1.tar.gz
+	rm -rf build/
+	rm -rf dist/
+	rm -rf *.egg-info
+	rm -rf c_secp256k1/*.so
+	rm -rf c_secp256k1/*.dylib
+	rm -rf c_secp256k1/*.dll
+	rm -rf c_secp256k1/*.pyd
+	rm -rf c_secp256k1/_c_secp256k1.py
+	rm -rf lib-secp256k1
 
 clean-pyc:
 	find . -name '*.pyc' -exec rm -f {} +
@@ -26,13 +28,13 @@ clean-pyc:
 	find . -name '__pycache__' -exec rm -fr {} +
 
 clean-test:
-	rm -fr .tox/
+	rm -rf .tox/
 
 test:
 	py.test
 
 release: clean
-	python setup.py sdist upload
+	python setup.py sdist bdist_wheel upload
 
 install: clean
 	python setup.py install

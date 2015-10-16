@@ -43,3 +43,11 @@ Test
 To test and install test dependenceis::
 
     python setup.py test
+
+
+Generate source & binary pakacages
+----------------------------------
+
+To generate installable source and binary packages::
+
+    python setup.py sdist bdist_wheel

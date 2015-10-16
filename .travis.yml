@@ -1,10 +1,11 @@
 language: python
-python: 
+python:
     - "2.7"
     - "pypy"
 
 install:
     - pip install .
+    - find /home/travis/virtualenv/python2.7.9/lib/python2.7/site-packages
 
 script: make test
 
