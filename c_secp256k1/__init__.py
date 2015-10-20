@@ -57,6 +57,40 @@ def _decode_sig(sig):
     return ord(sig[64]) + 27, _big_endian_to_int(sig[0:32]), _big_endian_to_int(sig[32:64])
 
 
+def _verify_seckey(seckey):
+    # Validate seckey
+    is_valid = lib.secp256k1_ec_seckey_verify(ctx, seckey)
+    return is_valid
+
+
+def _deserialize_pubkey(pub):
+    pubkey = ffi.new("secp256k1_pubkey *")
+    # Return 1 if pubkey is valid
+    valid_pub = lib.secp256k1_ec_pubkey_parse(
+        ctx,        # const secp256k1_context*
+        pubkey,     # secp256k1_pubkey*
+        pub,        # const unsigned char
+        len(pub)    # size_t
+    )
+    assert valid_pub == 1
+    return pubkey
+
+
+def _serialize_pubkey(pub):
+    serialized_pubkey = ffi.new("unsigned char[65]")
+    outputlen = ffi.new("size_t *")
+
+    # Serialize a pubkey object into a serialized byte sequence.
+    lib.secp256k1_ec_pubkey_serialize(
+        ctx,
+        serialized_pubkey,
+        outputlen,
+        pub,
+        0  # SECP256K1_EC_COMPRESSED
+    )
+    return serialized_pubkey
+
+
 # compact encoding
 
 
@@ -68,6 +102,7 @@ def ecdsa_sign_recoverable(msg32, seckey):
     assert isinstance(msg32, bytes)
     assert isinstance(seckey, bytes)
     assert len(msg32) == len(seckey) == 32
+    assert _verify_seckey(seckey) == 1
 
     # Make a recoverable signature of 65 bytes
     sig64 = ffi.new("secp256k1_ecdsa_recoverable_signature *")
@@ -104,19 +139,6 @@ def ecdsa_sign_compact(msg32, seckey):
     r = ffi.buffer(output64)[:64] + chr(recid[0])
     assert len(r) == 65, len(r)
     return r
-
-
-def verify_and_create_pubkey(seckey):
-    # Validate seckey
-    valid_sec = lib.secp256k1_ec_seckey_verify(ctx, seckey)
-    assert valid_sec == 1
-
-    # ccompute public key for a secret key
-    pubkey = ffi.new("secp256k1_pubkey *")
-    valid_pub = lib.secp256k1_ec_pubkey_create(ctx, pubkey, seckey)
-    assert valid_pub == 1
-
-    return pubkey
 
 
 def ecdsa_parse_recoverable_signature(sig):
@@ -169,17 +191,7 @@ def ecdsa_recover_compact(msg32, sig):
         msg32
     )
 
-    serialized_pubkey = ffi.new("unsigned char[65]")
-    outputlen = ffi.new("size_t *")
-
-    # Serialize a pubkey object into a serialized byte sequence.
-    lib.secp256k1_ec_pubkey_serialize(
-        ctx,
-        serialized_pubkey,
-        outputlen,
-        pubkey,
-        0  # SECP256K1_EC_COMPRESSED
-    )
+    serialized_pubkey = _serialize_pubkey(pubkey)
 
     buf = ffi.buffer(serialized_pubkey, 65)
     r = buf[:]
@@ -188,7 +200,7 @@ def ecdsa_recover_compact(msg32, sig):
     return r
 
 
-def ecdsa_verify_compact(msg32, rsig, pub):
+def ecdsa_verify_compact(msg32, sig, pub):
     """
         Takes the message of length 32 and the signed message and the pubkey
         Returns True if the signature is valid
@@ -198,31 +210,22 @@ def ecdsa_verify_compact(msg32, rsig, pub):
     assert len(pub) == 65
 
     # Setting the pubkey array
-    pubkey = ffi.new("secp256k1_pubkey *")
     c_sig = ffi.new("secp256k1_ecdsa_signature *")
 
-    # converst the recoverable signature to a signature
+    # converts the recoverable signature to a signature
     lib.secp256k1_ecdsa_recoverable_signature_convert(
         ctx,
         c_sig,
-        rsig
+        sig
     )
-
-    valid_pub = lib.secp256k1_ec_pubkey_parse(
-        ctx,        # const secp256k1_context*
-        pubkey,     # secp256k1_pubkey*
-        pub,        # const unsigned char
-        len(pub)    # size_t
-    )
-    assert valid_pub == 1
 
     is_valid = lib.secp256k1_ecdsa_verify(
         ctx,
         c_sig,  # const secp256k1_ecdsa_signature
         msg32,  # const unsigned char
-        pubkey  # const secp256k1_pubkey
+        _deserialize_pubkey(pub)  # const secp256k1_pubkey
     )
-    print "verify returned", is_valid
+    print("verify returned"), is_valid
     return is_valid == 1
 
 
