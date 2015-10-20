@@ -108,7 +108,7 @@ class HasExtensionsDistribution(Distribution):
 
 setup(
     name=PACKAGE_NAME,
-    version='0.0.3',
+    version='0.0.5',
     description="secp256k1 wrapped with cffi to use with python",
     author="Jacob Stenum Czepluch",
     author_email="j.czepluch@gmail.com",

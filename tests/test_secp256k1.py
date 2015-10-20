@@ -43,6 +43,7 @@ def test_compact():
     assert isinstance(vrs_compact, bytes)
     assert len(vrs_compact) == 65
     p3 = c_ecdsa_recover_compact(msg32, vrs_compact)
+    assert p3 == pub
     assert encode_pubkey(p3, 'bin') == pub
 
 
