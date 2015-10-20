@@ -16,6 +16,7 @@ from c_secp256k1 import ecdsa_raw_recover as c_ecdsa_raw_recover
 from c_secp256k1 import ecdsa_sign_der as c_ecdsa_sign_der
 from c_secp256k1 import ecdsa_recover_der as c_ecdsa_recover_der
 from c_secp256k1 import ecdsa_sign_recoverable as c_ecdsa_sign_recoverable
+from c_secp256k1 import ecdsa_parse_recoverable_signature as c_ecdsa_parse_recoverable_signature
 
 
 priv = ''.join(chr(random.randint(0, 255)) for i in range(32))
@@ -43,18 +44,23 @@ def test_raw():
 
 def test_compact():
     vrs_compact = c_ecdsa_sign_compact(msg32, priv)
+    # Recoverable signature
     rsig = c_ecdsa_sign_recoverable(msg32, priv)
+    # Parsed signature
+    psig = c_ecdsa_parse_recoverable_signature(vrs_compact)
     assert isinstance(vrs_compact, bytes)
     assert len(vrs_compact) == 65
     p3 = c_ecdsa_recover_compact(msg32, vrs_compact)
 
     assert encode_pubkey(p3, 'bin') == pub
     assert c_ecdsa_verify_compact(msg32, rsig, p3)
+    assert c_ecdsa_verify_compact(msg32, psig, p3)
 
     # check wrong pub
     p4 = c_ecdsa_recover_compact(msg32, 'x' + vrs_compact[1:])
     assert encode_pubkey(p4, 'bin') != pub
     assert not c_ecdsa_verify_compact(msg32, rsig, p4)
+    assert not c_ecdsa_verify_compact(msg32, psig, p4)
 
 
 def test_robustness():

@@ -63,7 +63,7 @@ def _decode_sig(sig):
 def ecdsa_sign_recoverable(msg32, seckey):
     """
         Takes a message of 32 bytes and a private key
-        Returns a unsigned char array of length 65 containing the signed message
+        Returns a recoverable signature of length 64
     """
     assert isinstance(msg32, bytes)
     assert isinstance(seckey, bytes)
@@ -84,6 +84,10 @@ def ecdsa_sign_recoverable(msg32, seckey):
 
 
 def ecdsa_sign_compact(msg32, seckey):
+    """
+        Takes the same message and seckey as ecdsa_sign_recoverable 
+        Returns an unsigned char array of length 65 containing the signed message
+    """
     # Assign 65 bytes to output
     output64 = ffi.new("unsigned char[65]")
     # ffi definition of recid
@@ -115,44 +119,60 @@ def verify_and_create_pubkey(seckey):
     return pubkey
 
 
-def ecdsa_recover_compact(msg32, sig):
+def ecdsa_parse_recoverable_signature(sig):
     """
         Takes the message of length 32 and the signed message
-        Returns the public key of the private key from the sign function
+        Returns a parsed recoverable signature of length 65 bytes
     """
-    assert isinstance(msg32, bytes)
+    # Buffer for getting values of signature object
     assert isinstance(sig, bytes)
-    assert len(msg32) == 32
     assert len(sig) == 65
-    if not (_big_endian_to_int(sig[64]) >= 0 and
-            _big_endian_to_int(sig[64]) <= 3):
-        print("Recid must be 1, 2, 3 or 4")
-        return
 
-    # Setting the pubkey array
-    pubkey = ffi.new("secp256k1_pubkey *")
     # Make a recoverable signature of 65 bytes
     rec_sig = ffi.new("secp256k1_ecdsa_recoverable_signature *")
     # Retrieving the recid from the last byte of the signed key
     recid = ord(sig[64])
 
-    lib.secp256k1_ecdsa_recoverable_signature_parse_compact(
+    # Parse a revoverable signature
+    parsable_sig = lib.secp256k1_ecdsa_recoverable_signature_parse_compact(
         ctx,
         rec_sig,
         sig,
         recid
     )
+    # Verify that the signature is parsable
+    assert parsable_sig == 1
+
+    return rec_sig
+
+
+def ecdsa_recover_compact(msg32, sig):
+    """
+        Takes the a message and a parsed recoverable signature
+        Returns the serialized public key from the private key in the sign function
+    """
+    assert isinstance(msg32, bytes)
+    assert len(msg32) == 32
+    # Check that recid is of valid value
+    if not (_big_endian_to_int(sig[64]) >= 0 and
+            _big_endian_to_int(sig[64]) <= 3):
+        # raise Exception("invalid recid")
+        return
+
+    # Setting the pubkey array
+    pubkey = ffi.new("secp256k1_pubkey *")
 
     lib.secp256k1_ecdsa_recover(
         ctx,
         pubkey,
-        rec_sig,
+        ecdsa_parse_recoverable_signature(sig),
         msg32
     )
 
     serialized_pubkey = ffi.new("unsigned char[65]")
     outputlen = ffi.new("size_t *")
 
+    # Serialize a pubkey object into a serialized byte sequence.
     lib.secp256k1_ec_pubkey_serialize(
         ctx,
         serialized_pubkey,
@@ -188,12 +208,13 @@ def ecdsa_verify_compact(msg32, rsig, pub):
         rsig
     )
 
-    lib.secp256k1_ec_pubkey_parse(
+    valid_pub = lib.secp256k1_ec_pubkey_parse(
         ctx,        # const secp256k1_context*
         pubkey,     # secp256k1_pubkey*
         pub,        # const unsigned char
         len(pub)    # size_t
     )
+    assert valid_pub == 1
 
     is_valid = lib.secp256k1_ecdsa_verify(
         ctx,
