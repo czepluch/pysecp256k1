@@ -108,6 +108,20 @@ ffi.cdef('''
               const secp256k1_context* ctx,
               const unsigned char *seckey
             );
+
+            int secp256k1_ecdsa_signature_parse_der(
+              const secp256k1_context* ctx,
+              secp256k1_ecdsa_signature* sig,
+              const unsigned char *input,
+              size_t inputlen
+            );
+
+            int secp256k1_ecdsa_signature_serialize_der(
+              const secp256k1_context* ctx,
+              unsigned char *output,
+              size_t *outputlen,
+              const secp256k1_ecdsa_signature* sig
+            );
          ''')
 
 if __name__ == '__main__':
