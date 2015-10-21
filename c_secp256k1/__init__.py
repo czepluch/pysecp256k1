@@ -294,18 +294,15 @@ def ecdsa_recover_raw(rawhash, vrs):
     return ecdsa_recover_compact(rawhash, _encode_sig(*vrs))
 
 
-def ecdsa_verify_raw(msg32, sig, pub):
+def ecdsa_verify_raw(msg32, vrs, pub):
     """
         Takes a message, the signature being verified and a pubkey
         Returns 1 if signature is valid with given pubkey
     """
-    return ecdsa_verify_compact(msg32, sig, pub)
-
+    assert len(vrs) == 3
+    return ecdsa_verify_compact(msg32, _encode_sig(*vrs), pub)
 
 # DER encoding
-
-def ecdsa_sign_der_recoverable(msg32, seckey):
-    return ecdsa_sign_recoverable(msg32, seckey)
 
 
 def ecdsa_sign_der(msg, seckey):

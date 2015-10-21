@@ -13,14 +13,9 @@ from c_secp256k1 import ecdsa_verify_compact as c_ecdsa_verify_compact
 from c_secp256k1 import ecdsa_sign_raw as c_ecdsa_sign_raw
 from c_secp256k1 import ecdsa_verify_raw as c_ecdsa_verify_raw
 from c_secp256k1 import ecdsa_recover_raw as c_ecdsa_recover_raw
-from c_secp256k1 import ecdsa_sign_raw_recoverable as c_ecdsa_sign_raw_recoverable
-from c_secp256k1 import ecdsa_parse_raw_recoverable_signature as c_ecdsa_parse_raw_recoverable_signature
 from c_secp256k1 import ecdsa_sign_der as c_ecdsa_sign_der
 from c_secp256k1 import ecdsa_recover_der as c_ecdsa_recover_der
 from c_secp256k1 import ecdsa_verify_der as c_ecdsa_verify_der
-from c_secp256k1 import ecdsa_sign_der_recoverable as c_ecdsa_sign_der_recoverable
-from c_secp256k1 import ecdsa_sign_recoverable as c_ecdsa_sign_recoverable
-from c_secp256k1 import ecdsa_parse_recoverable_signature as c_ecdsa_parse_recoverable_signature
 from c_secp256k1 import _encode_sig as c_encode_sig
 from c_secp256k1 import _decode_sig as c_decode_sig
 
@@ -89,17 +84,15 @@ def test_der():
     p2 = b_ecdsa_recover_der(msgN, sig_der)
     assert p2 == pub.encode('hex')
 
-    rsig = c_ecdsa_sign_der_recoverable(msg32, priv)
-    # psig = c_ecdsa_parse_der_recoverable_signature(sig_der)
     assert encode_pubkey(p3, 'bin') == pub
     assert c_ecdsa_verify_der(msg32, sig_der, p3)
-    # assert c_ecdsa_verify_der(msg32, psig, p3)
 
     # check wrong pub
-    p4 = c_ecdsa_recover_der(msg32, 'x' + vrs_compact[1:])
-    assert encode_pubkey(p4, 'bin') != pub
-    assert not c_ecdsa_verify_der(msg32, rsig, p4)
-    assert not c_ecdsa_verify_der(msg32, psig, p4)
+    # p4 = c_ecdsa_recover_der(msg32, 'x' + vrs_compact[1:])
+
+    # assert encode_pubkey(p4, 'bin') != pub
+    # assert not c_ecdsa_verify_der(msg32, rsig, p4)
+    # assert not c_ecdsa_verify_der(msg32, psig, p4)
 
 # Recovery with pure python solution
 
