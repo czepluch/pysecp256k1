@@ -47,43 +47,33 @@ def test_raw():
     assert encode_pubkey(p4, 'bin') == pub
     assert encode_pubkey(p5, 'bin') == pub
 
-    # Verify
-    # revoverable signature
-    rsig = c_ecdsa_sign_raw_recoverable(msg32, priv)
-    # parsed signature
-    psig = c_ecdsa_parse_raw_recoverable_signature(vrs3)
-
-    assert c_ecdsa_verify_raw(msg32, rsig, p3)
-    assert c_ecdsa_verify_raw(msg32, psig, p3)
-
     # check wrong pub
-    wrong_vrs = c_ecdsa_sign_raw(msg32, 'x'*32)
+    wrong_vrs = c_ecdsa_sign_raw(msg32, 'x' * 32)
     p2 = c_ecdsa_recover_raw(msg32, wrong_vrs)
     assert encode_pubkey(p2, 'bin') != pub
-    assert not c_ecdsa_verify_raw(msg32, rsig, p2)
-    assert not c_ecdsa_verify_raw(msg32, psig, p2)
 
 
 def test_compact():
-    vrs_compact = c_ecdsa_sign_compact(msg32, priv)
-    # Recoverable signature
-    rsig = c_ecdsa_sign_recoverable(msg32, priv)
-    # Parsed signature
-    psig = c_ecdsa_parse_recoverable_signature(vrs_compact)
-    assert isinstance(vrs_compact, bytes)
-    assert len(vrs_compact) == 65
-    p3 = c_ecdsa_recover_compact(msg32, vrs_compact)
+    sig_compact = c_ecdsa_sign_compact(msg32, priv)
+    assert isinstance(sig_compact, bytes)
+    assert len(sig_compact) == 65
 
+    # recover
+    p3 = c_ecdsa_recover_compact(msg32, sig_compact)
+
+    # verify
     assert encode_pubkey(p3, 'bin') == pub
-    assert c_ecdsa_verify_compact(msg32, rsig, p3)
-    assert c_ecdsa_verify_compact(msg32, psig, p3)
+    assert c_ecdsa_verify_compact(msg32, sig_compact, p3)
 
     # check wrong pub
-    wrong_vrs = c_ecdsa_sign_compact(msg32, 'x'*32)
-    p4 = c_ecdsa_recover_compact(msg32, wrong_vrs)
+    sig_compact_2 = c_ecdsa_sign_compact(msg32, 'x' * 32)
+    p4 = c_ecdsa_recover_compact(msg32, sig_compact_2)
+
+    assert sig_compact_2[20] != 'E'
+    false_sig_compact = sig_compact_2[:20] + 'E' + sig_compact_2[21:]
+
     assert encode_pubkey(p4, 'bin') != pub
-    assert not c_ecdsa_verify_compact(msg32, rsig, p4)
-    assert not c_ecdsa_verify_compact(msg32, psig, p4)
+    assert not c_ecdsa_verify_compact(msg32, false_sig_compact, p4)
 
 
 def test_robustness():
@@ -92,17 +82,17 @@ def test_robustness():
 
 
 def test_der():
-    vrs_der = c_ecdsa_sign_der(msgN, priv)
-    assert isinstance(vrs_der, bytes)
-    p3 = c_ecdsa_recover_der(msgN, vrs_der)
+    sig_der = c_ecdsa_sign_der(msgN, priv)
+    assert isinstance(sig_der, bytes)
+    p3 = c_ecdsa_recover_der(msgN, sig_der)
     assert p3 == pub.encode('hex')
-    p2 = b_ecdsa_recover_der(msgN, vrs_der)
+    p2 = b_ecdsa_recover_der(msgN, sig_der)
     assert p2 == pub.encode('hex')
 
     rsig = c_ecdsa_sign_der_recoverable(msg32, priv)
-    # psig = c_ecdsa_parse_der_recoverable_signature(vrs_der)
+    # psig = c_ecdsa_parse_der_recoverable_signature(sig_der)
     assert encode_pubkey(p3, 'bin') == pub
-    assert c_ecdsa_verify_der(msg32, vrs_der, p3)
+    assert c_ecdsa_verify_der(msg32, sig_der, p3)
     # assert c_ecdsa_verify_der(msg32, psig, p3)
 
     # check wrong pub
