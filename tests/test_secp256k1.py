@@ -99,10 +99,10 @@ def test_der():
     p2 = b_ecdsa_recover_der(msgN, vrs_der)
     assert p2 == pub.encode('hex')
 
-    rsig = c_ecdsa_sign_der_recoverable(msg32, priv)
+    rsig = c_ecdsa_sign_der_recoverable(msgN, priv)
     # psig = c_ecdsa_parse_der_recoverable_signature(vrs_der)
     assert encode_pubkey(p3, 'bin') == pub
-    assert c_ecdsa_verify_der(msg32, vrs_der, p3)
+    assert c_ecdsa_verify_der(msgN, vrs_der, p3)
     # assert c_ecdsa_verify_der(msg32, psig, p3)
 
     # check wrong pub

@@ -94,13 +94,13 @@ def _serialize_pubkey(pub):
 def _der_deserialize_signature(in_sig):
     sig = ffi.new("secp256k1_ecdsa_signature *")
     # Return 1 when signature could be parsed
-    valid_sig = lib.secp256k1_ecdsa_signature_parse_der(
+    valid_pub = lib.secp256k1_ecdsa_signature_parse_der(
         ctx,        # const secp256k1_context*
         sig,        # secp256k1_ecdsa_signature*
         in_sig,     # const unsigned char
-        len(in_sig)    # size_t
+        len(pub)    # size_t
     )
-    assert valid_sig == 1
+    assert valid_pub == 1
     return sig
 
 
@@ -236,7 +236,6 @@ def ecdsa_verify_compact(msg32, sig, pub):
     assert isinstance(msg32, bytes)
     assert len(msg32) == 32
     assert len(pub) == 65
-    assert len(sig) == 65
 
     # Setting the pubkey array
     c_sig = ffi.new("secp256k1_ecdsa_signature *")
@@ -318,4 +317,7 @@ def ecdsa_recover_der(msg, sig):
 
 
 def ecdsa_verify_der(msg, sig, pub):
-    return ecdsa_verify_raw(_b_electrum_sig_hash(msg), _b_decode_sig(sig), pub.decode('hex'))
+
+    der_sig = _der_deserialize_pubkey(sig)
+
+    return ecdsa_verify_raw(_b_electrum_sig_hash(msg), _b_decode_sig(der_sig), pub)
