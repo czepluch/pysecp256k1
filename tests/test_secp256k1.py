@@ -10,13 +10,17 @@ import time
 from c_secp256k1 import ecdsa_recover_compact as c_ecdsa_recover_compact
 from c_secp256k1 import ecdsa_sign_compact as c_ecdsa_sign_compact
 from c_secp256k1 import ecdsa_verify_compact as c_ecdsa_verify_compact
-from c_secp256k1 import ecdsa_raw_sign as c_ecdsa_raw_sign
-from c_secp256k1 import ecdsa_raw_verify as c_ecdsa_raw_verify
-from c_secp256k1 import ecdsa_raw_recover as c_ecdsa_raw_recover
+from c_secp256k1 import ecdsa_sign_raw as c_ecdsa_sign_raw
+from c_secp256k1 import ecdsa_verify_raw as c_ecdsa_verify_raw
+from c_secp256k1 import ecdsa_recover_raw as c_ecdsa_recover_raw
+from c_secp256k1 import ecdsa_sign_raw_recoverable as c_ecdsa_sign_raw_recoverable
+from c_secp256k1 import ecdsa_parse_raw_recoverable_signature as c_ecdsa_parse_raw_recoverable_signature
 from c_secp256k1 import ecdsa_sign_der as c_ecdsa_sign_der
 from c_secp256k1 import ecdsa_recover_der as c_ecdsa_recover_der
 from c_secp256k1 import ecdsa_sign_recoverable as c_ecdsa_sign_recoverable
 from c_secp256k1 import ecdsa_parse_recoverable_signature as c_ecdsa_parse_recoverable_signature
+from c_secp256k1 import _encode_sig as c_encode_sig
+from c_secp256k1 import _decode_sig as c_decode_sig
 
 
 priv = ''.join(chr(random.randint(0, 255)) for i in range(32))
@@ -29,10 +33,10 @@ def test_raw():
     vrs1 = b_ecdsa_raw_sign(msg32, priv)
     assert isinstance(vrs1, tuple)
     assert len(vrs1) == 3
-    vrs3 = c_ecdsa_raw_sign(msg32, priv)
+    vrs3 = c_ecdsa_sign_raw(msg32, priv)
     p1 = b_ecdsa_raw_recover(msg32, vrs1)
-    p3 = c_ecdsa_raw_recover(msg32, vrs1)
-    p4 = c_ecdsa_raw_recover(msg32, vrs3)
+    p3 = c_ecdsa_recover_raw(msg32, vrs1)
+    p4 = c_ecdsa_recover_raw(msg32, vrs3)
     p5 = b_ecdsa_raw_recover(msg32, vrs3)
 
     # Ensure that recovered pub key is the same
@@ -40,6 +44,22 @@ def test_raw():
     assert encode_pubkey(p3, 'bin') == pub
     assert encode_pubkey(p4, 'bin') == pub
     assert encode_pubkey(p5, 'bin') == pub
+
+    # Verify
+    # revoverable signature
+    rsig = c_ecdsa_sign_raw_recoverable(msg32, priv)
+    # parsed signature
+    psig = c_ecdsa_parse_raw_recoverable_signature(vrs3)
+
+    assert c_ecdsa_verify_raw(msg32, rsig, p3)
+    assert c_ecdsa_verify_raw(msg32, psig, p3)
+
+    # check wrong pub
+    wrong_vrs = c_ecdsa_sign_raw(msg32, 'x'*32)
+    p2 = c_ecdsa_recover_raw(msg32, wrong_vrs)
+    assert encode_pubkey(p2, 'bin') != pub
+    assert not c_ecdsa_verify_raw(msg32, rsig, p2)
+    assert not c_ecdsa_verify_raw(msg32, psig, p2)
 
 
 def test_compact():

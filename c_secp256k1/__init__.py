@@ -120,7 +120,7 @@ def ecdsa_sign_recoverable(msg32, seckey):
 
 def ecdsa_sign_compact(msg32, seckey):
     """
-        Takes the same message and seckey as ecdsa_sign_recoverable 
+        Takes the same message and seckey as ecdsa_sign_recoverable
         Returns an unsigned char array of length 65 containing the signed message
     """
     # Assign 65 bytes to output
@@ -143,7 +143,7 @@ def ecdsa_sign_compact(msg32, seckey):
 
 def ecdsa_parse_recoverable_signature(sig):
     """
-        Takes the message of length 32 and the signed message
+        Takes a signed compact message 
         Returns a parsed recoverable signature of length 65 bytes
     """
     # Buffer for getting values of signature object
@@ -202,7 +202,7 @@ def ecdsa_recover_compact(msg32, sig):
 
 def ecdsa_verify_compact(msg32, sig, pub):
     """
-        Takes the message of length 32 and the signed message and the pubkey
+        Takes a message of length 32 and a signed message and a pubkey
         Returns True if the signature is valid
     """
     assert isinstance(msg32, bytes)
@@ -231,7 +231,16 @@ def ecdsa_verify_compact(msg32, sig, pub):
 
 # raw encoding (v, r, s)
 
-def ecdsa_raw_sign(rawhash, key):
+
+def ecdsa_sign_raw_recoverable(msg32, seckey):
+    """
+        Takes a message of 32 bytes and a private key
+        Returns a recoverable signature of length 64
+    """
+    return ecdsa_sign_recoverable(msg32, seckey)
+
+
+def ecdsa_sign_raw(rawhash, key):
     """
         Takes a rawhash message and a private key and returns a tuple
         of the v, r, s values.
@@ -239,7 +248,15 @@ def ecdsa_raw_sign(rawhash, key):
     return _decode_sig(ecdsa_sign_compact(rawhash, key))
 
 
-def ecdsa_raw_recover(rawhash, vrs):
+def ecdsa_parse_raw_recoverable_signature(vrs):
+    """
+        Takes a raw signed message
+        Returns a pased recoverable signature of length 65 bytes
+    """
+    return ecdsa_parse_recoverable_signature(_encode_sig(*vrs))
+
+
+def ecdsa_recover_raw(rawhash, vrs):
     """
         Takes a rawhash message of length 32 bytes and a (v, r, s) tuple
         Returns a public key for the private key used in the sign function
@@ -248,20 +265,24 @@ def ecdsa_raw_recover(rawhash, vrs):
     return ecdsa_recover_compact(rawhash, _encode_sig(*vrs))
 
 
-def ecdsa_raw_verify(msg32, sig, pub):  # FIXME create wrapper
-    return _b_ecdsa_raw_verify(msg32, sig, pub)
+def ecdsa_verify_raw(msg32, sig, pub):
+    """
+        Takes a message, the signature being verified and a pubkey
+        Returns 1 if signature is valid with given pubkey
+    """
+    return ecdsa_verify_compact(msg32, sig, pub)
 
 
 # DER encoding
 
 def ecdsa_sign_der(msg, seckey):
-    return _b_encode_sig(*ecdsa_raw_sign(_b_electrum_sig_hash(msg), seckey))
+    return _b_encode_sig(*ecdsa_sign_raw(_b_electrum_sig_hash(msg), seckey))
 
 
 def ecdsa_recover_der(msg, sig):
-    return _b_encode_pubkey(ecdsa_raw_recover(_b_electrum_sig_hash(msg), _b_decode_sig(sig)),
+    return _b_encode_pubkey(ecdsa_recover_raw(_b_electrum_sig_hash(msg), _b_decode_sig(sig)),
                             'hex')
 
 
 def ecdsa_verify_der(msg, sig, pub):
-    return ecdsa_raw_verify(_b_electrum_sig_hash(msg), _b_decode_sig(sig), pub)
+    return ecdsa_verify_raw(_b_electrum_sig_hash(msg), _b_decode_sig(sig), pub)
