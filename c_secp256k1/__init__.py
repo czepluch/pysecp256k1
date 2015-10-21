@@ -171,7 +171,7 @@ def ecdsa_sign_compact(msg32, seckey):
 
 def ecdsa_parse_recoverable_signature(sig):
     """
-        Takes a signed compact message 
+        Takes a signed compact message
         Returns a parsed recoverable signature of length 65 bytes
     """
     # Buffer for getting values of signature object
@@ -244,7 +244,7 @@ def ecdsa_verify_compact(msg32, sig, pub):
     lib.secp256k1_ecdsa_recoverable_signature_convert(
         ctx,
         c_sig,
-        sig
+        ecdsa_parse_recoverable_signature(sig)
     )
 
     is_valid = lib.secp256k1_ecdsa_verify(
