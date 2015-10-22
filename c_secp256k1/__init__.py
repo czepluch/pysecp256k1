@@ -2,8 +2,6 @@ from glob import glob
 from os import path
 import random
 from bitcoin import electrum_sig_hash as _b_electrum_sig_hash
-from bitcoin import encode_pubkey as _b_encode_pubkey
-from bitcoin import ecdsa_raw_verify as _b_ecdsa_raw_verify
 from bitcoin import encode_sig as _b_encode_sig
 from bitcoin import decode_sig as _b_decode_sig
 
@@ -27,6 +25,18 @@ ctx = lib.secp256k1_context_create(3)
 ndata = ffi.new("unsigned char[]", ''.join(chr(random.randint(0, 255)) for i in range(32)))
 
 # helpers
+
+
+class InvalidPubkeyError(Exception):
+    pass
+
+
+class InvalidSignatureError(Exception):
+    pass
+
+
+class InvalidPrivateKeyError(Exception):
+    pass
 
 
 def _int_to_big_endian(value):
@@ -72,7 +82,8 @@ def _deserialize_pubkey(pub):
         pub,        # const unsigned char
         len(pub)    # size_t
     )
-    assert valid_pub == 1
+    if not valid_pub:
+        raise InvalidPubkeyError()
     return pubkey
 
 
@@ -100,7 +111,8 @@ def _der_deserialize_signature(in_sig):
         in_sig,     # const unsigned char
         len(pub)    # size_t
     )
-    assert valid_pub == 1
+    if not valid_sig:
+        raise InvalidSignatureError()
     return sig
 
 
@@ -119,10 +131,7 @@ def _der_serialize_pubkey(sig):
     return serialized_pubkey
 
 
-# compact encoding
-
-
-def ecdsa_sign_recoverable(msg32, seckey):
+def _ecdsa_sign_recoverable(msg32, seckey):
     """
         Takes a message of 32 bytes and a private key
         Returns a recoverable signature of length 64
@@ -130,7 +139,8 @@ def ecdsa_sign_recoverable(msg32, seckey):
     assert isinstance(msg32, bytes)
     assert isinstance(seckey, bytes)
     assert len(msg32) == len(seckey) == 32
-    assert _verify_seckey(seckey) == 1
+    if not _verify_seckey(seckey):
+        raise InvalidPrivateKeyError()
 
     # Make a recoverable signature of 65 bytes
     sig64 = ffi.new("secp256k1_ecdsa_recoverable_signature *")
@@ -146,32 +156,8 @@ def ecdsa_sign_recoverable(msg32, seckey):
     return sig64
 
 
-def ecdsa_sign_compact(msg32, seckey):
+def _parse_to_recoverable_signature(sig):
     """
-        Takes the same message and seckey as ecdsa_sign_recoverable
-        Returns an unsigned char array of length 65 containing the signed message
-    """
-    # Assign 65 bytes to output
-    output64 = ffi.new("unsigned char[65]")
-    # ffi definition of recid
-    recid = ffi.new("int *")
-
-    lib.secp256k1_ecdsa_recoverable_signature_serialize_compact(
-        ctx,
-        output64,
-        recid,
-        ecdsa_sign_recoverable(msg32, seckey)
-    )
-
-    # Assign recid to the last byte in the output array
-    r = ffi.buffer(output64)[:64] + chr(recid[0])
-    assert len(r) == 65, len(r)
-    return r
-
-
-def ecdsa_parse_recoverable_signature(sig):
-    """
-        Takes a signed compact message
         Returns a parsed recoverable signature of length 65 bytes
     """
     # Buffer for getting values of signature object
@@ -191,9 +177,36 @@ def ecdsa_parse_recoverable_signature(sig):
         recid
     )
     # Verify that the signature is parsable
-    assert parsable_sig == 1
+    if not parsable_sig:
+        raise InvalidSignatureError()
 
     return rec_sig
+
+
+# compact encoding
+
+
+def ecdsa_sign_compact(msg32, seckey):
+    """
+        Takes the same message and seckey as _ecdsa_sign_recoverable
+        Returns an unsigned char array of length 65 containing the signed message
+    """
+    # Assign 65 bytes to output
+    output64 = ffi.new("unsigned char[65]")
+    # ffi definition of recid
+    recid = ffi.new("int *")
+
+    lib.secp256k1_ecdsa_recoverable_signature_serialize_compact(
+        ctx,
+        output64,
+        recid,
+        _ecdsa_sign_recoverable(msg32, seckey)
+    )
+
+    # Assign recid to the last byte in the output array
+    r = ffi.buffer(output64)[:64] + chr(recid[0])
+    assert len(r) == 65, len(r)
+    return r
 
 
 def ecdsa_recover_compact(msg32, sig):
@@ -204,10 +217,10 @@ def ecdsa_recover_compact(msg32, sig):
     assert isinstance(msg32, bytes)
     assert len(msg32) == 32
     # Check that recid is of valid value
-    if not (_big_endian_to_int(sig[64]) >= 0 and
-            _big_endian_to_int(sig[64]) <= 3):
-        # raise Exception("invalid recid")
-        return
+    recid = _big_endian_to_int(sig[64])
+
+    if not (recid >= 0 and recid <= 3):
+        raise InvalidSignatureError()
 
     # Setting the pubkey array
     pubkey = ffi.new("secp256k1_pubkey *")
@@ -215,7 +228,7 @@ def ecdsa_recover_compact(msg32, sig):
     lib.secp256k1_ecdsa_recover(
         ctx,
         pubkey,
-        ecdsa_parse_recoverable_signature(sig),
+        _parse_to_recoverable_signature(sig),
         msg32
     )
 
@@ -244,7 +257,7 @@ def ecdsa_verify_compact(msg32, sig, pub):
     lib.secp256k1_ecdsa_recoverable_signature_convert(
         ctx,
         c_sig,
-        ecdsa_parse_recoverable_signature(sig)
+        _parse_to_recoverable_signature(sig)
     )
 
     is_valid = lib.secp256k1_ecdsa_verify(
@@ -253,19 +266,10 @@ def ecdsa_verify_compact(msg32, sig, pub):
         msg32,  # const unsigned char
         _deserialize_pubkey(pub)  # const secp256k1_pubkey
     )
-    print("verify returned"), is_valid
     return is_valid == 1
 
 
 # raw encoding (v, r, s)
-
-
-def ecdsa_sign_raw_recoverable(msg32, seckey):
-    """
-        Takes a message of 32 bytes and a private key
-        Returns a recoverable signature of length 64
-    """
-    return ecdsa_sign_recoverable(msg32, seckey)
 
 
 def ecdsa_sign_raw(rawhash, key):
@@ -276,35 +280,25 @@ def ecdsa_sign_raw(rawhash, key):
     return _decode_sig(ecdsa_sign_compact(rawhash, key))
 
 
-def ecdsa_parse_raw_recoverable_signature(vrs):
-    """
-        Takes a raw signed message
-        Returns a pased recoverable signature of length 65 bytes
-    """
-    return ecdsa_parse_recoverable_signature(_encode_sig(*vrs))
-
-
 def ecdsa_recover_raw(rawhash, vrs):
     """
         Takes a rawhash message of length 32 bytes and a (v, r, s) tuple
         Returns a public key for the private key used in the sign function
     """
     assert len(vrs) == 3
+    assert len(rawhash) == 32
     return ecdsa_recover_compact(rawhash, _encode_sig(*vrs))
 
 
-def ecdsa_verify_raw(msg32, sig, pub):
+def ecdsa_verify_raw(msg32, vrs, pub):
     """
         Takes a message, the signature being verified and a pubkey
         Returns 1 if signature is valid with given pubkey
     """
-    return ecdsa_verify_compact(msg32, sig, pub)
-
+    assert len(vrs) == 3
+    return ecdsa_verify_compact(msg32, _encode_sig(*vrs), pub)
 
 # DER encoding
-
-def ecdsa_sign_der_recoverable(msg32, seckey):
-    return ecdsa_sign_recoverable(msg32, seckey)
 
 
 def ecdsa_sign_der(msg, seckey):
@@ -312,9 +306,8 @@ def ecdsa_sign_der(msg, seckey):
 
 
 def ecdsa_recover_der(msg, sig):
-    return _b_encode_pubkey(ecdsa_recover_raw(_b_electrum_sig_hash(msg), _b_decode_sig(sig)),
-                            'hex')
+    return ecdsa_recover_raw(_b_electrum_sig_hash(msg), _b_decode_sig(sig))
 
 
 def ecdsa_verify_der(msg, sig, pub):
-    return ecdsa_verify_raw(_b_electrum_sig_hash(msg), _b_decode_sig(sig), _b_encode_pubkey(pub))
+    return ecdsa_verify_raw(_b_electrum_sig_hash(msg), _b_decode_sig(sig), pub)
