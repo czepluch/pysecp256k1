@@ -52,6 +52,15 @@ def test_raw():
     p2 = c_ecdsa_recover_raw(msg32, wrong_vrs)
     assert encode_pubkey(p2, 'bin') != pub
 
+    # verify
+    assert c_ecdsa_verify_raw(msg32, vrs1, p3)
+
+    # verify wrong pub
+    assert wrong_vrs[20] != 'E'
+    false_vrs = wrong_vrs[:20] + 'E' + wrong_vrs[21:]
+
+    assert not c_ecdsa_verify_raw(msg32, false_vrs, p2)
+
 
 def test_compact():
     sig_compact = c_ecdsa_sign_compact(msg32, priv)
@@ -89,17 +98,14 @@ def test_der():
     p2 = b_ecdsa_recover_der(msgN, sig_der)
     assert p2 == pub.encode('hex')
 
-    rsig = c_ecdsa_sign_der_recoverable(msg32, priv)
-    # psig = c_ecdsa_parse_der_recoverable_signature(sig_der)
     assert encode_pubkey(p3, 'bin') == pub
     assert c_ecdsa_verify_der(msg32, sig_der, p3)
-    # assert c_ecdsa_verify_der(msg32, psig, p3)
 
     # check wrong pub
     p4 = c_ecdsa_recover_der(msg32, 'x' + vrs_compact[1:])
     assert encode_pubkey(p4, 'bin') != pub
-    assert not c_ecdsa_verify_der(msg32, rsig, p4)
-    assert not c_ecdsa_verify_der(msg32, psig, p4)
+    # assert not c_ecdsa_verify_der(msg32, rsig, p4)
+    # assert not c_ecdsa_verify_der(msg32, psig, p4)
 
 # Recovery with pure python solution
 

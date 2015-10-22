@@ -317,7 +317,4 @@ def ecdsa_recover_der(msg, sig):
 
 
 def ecdsa_verify_der(msg, sig, pub):
-
-    der_sig = _der_deserialize_pubkey(sig)
-
-    return ecdsa_verify_raw(_b_electrum_sig_hash(msg), _b_decode_sig(der_sig), pub)
+    return ecdsa_verify_raw(_b_electrum_sig_hash(msg), _b_decode_sig(sig), _b_encode_pubkey(pub))
