@@ -1,23 +1,21 @@
 # -*- coding: utf-8 -*-
 import random
+import pytest
 random.seed(12312421412)
 from bitcoin import privtopub, encode_pubkey
 from bitcoin import ecdsa_raw_sign as b_ecdsa_raw_sign
 from bitcoin import ecdsa_raw_recover as b_ecdsa_raw_recover
-from bitcoin import ecdsa_sign as b_ecdsa_sign_der
 from bitcoin import ecdsa_recover as b_ecdsa_recover_der
 import time
 from c_secp256k1 import ecdsa_recover_compact as c_ecdsa_recover_compact
 from c_secp256k1 import ecdsa_sign_compact as c_ecdsa_sign_compact
 from c_secp256k1 import ecdsa_verify_compact as c_ecdsa_verify_compact
 from c_secp256k1 import ecdsa_sign_raw as c_ecdsa_sign_raw
-from c_secp256k1 import ecdsa_verify_raw as c_ecdsa_verify_raw
 from c_secp256k1 import ecdsa_recover_raw as c_ecdsa_recover_raw
 from c_secp256k1 import ecdsa_sign_der as c_ecdsa_sign_der
 from c_secp256k1 import ecdsa_recover_der as c_ecdsa_recover_der
 from c_secp256k1 import ecdsa_verify_der as c_ecdsa_verify_der
-from c_secp256k1 import _encode_sig as c_encode_sig
-from c_secp256k1 import _decode_sig as c_decode_sig
+from c_secp256k1 import InvalidPubkeyError, InvalidSignatureError
 
 
 priv = ''.join(chr(random.randint(0, 255)) for i in range(32))
@@ -38,14 +36,20 @@ def test_raw():
 
     # Ensure that recovered pub key is the same
     assert encode_pubkey(p1, 'bin') == pub
-    assert encode_pubkey(p3, 'bin') == pub
-    assert encode_pubkey(p4, 'bin') == pub
+    assert p3 == pub
+    assert p4 == pub
     assert encode_pubkey(p5, 'bin') == pub
 
     # check wrong pub
     wrong_vrs = c_ecdsa_sign_raw(msg32, 'x' * 32)
     p2 = c_ecdsa_recover_raw(msg32, wrong_vrs)
     assert encode_pubkey(p2, 'bin') != pub
+
+
+def _tampered_65b(b):
+    assert len(b) == 65
+    assert b[20] != 'E'
+    return b[:20] + 'E' + b[21:]
 
 
 def test_compact():
@@ -57,45 +61,43 @@ def test_compact():
     p3 = c_ecdsa_recover_compact(msg32, sig_compact)
 
     # verify
-    assert encode_pubkey(p3, 'bin') == pub
-    assert c_ecdsa_verify_compact(msg32, sig_compact, p3)
+    assert p3 == pub
+    assert c_ecdsa_verify_compact(msg32, sig_compact, pub)
 
     # check wrong pub
     sig_compact_2 = c_ecdsa_sign_compact(msg32, 'x' * 32)
     p4 = c_ecdsa_recover_compact(msg32, sig_compact_2)
+    assert p4 != pub
 
-    assert sig_compact_2[20] != 'E'
-    false_sig_compact = sig_compact_2[:20] + 'E' + sig_compact_2[21:]
-
-    assert encode_pubkey(p4, 'bin') != pub
-    assert not c_ecdsa_verify_compact(msg32, false_sig_compact, p4)
+    # check wrong sig
+    false_sig_compact = _tampered_65b(sig_compact)
+    assert not c_ecdsa_verify_compact(msg32, false_sig_compact, pub)
 
 
 def test_robustness():
-    vrs_compact = c_ecdsa_sign_compact(msg32, priv)
-    p3 = c_ecdsa_recover_compact(msg32, vrs_compact[:-1] + 'x')  # should not segfault
+    sig_compact = c_ecdsa_sign_compact(msg32, priv)
+    # must not segfault
+    c_ecdsa_recover_compact(msg32, _tampered_65b(sig_compact))
+    with pytest.raises(InvalidSignatureError):
+        c_ecdsa_recover_compact(msg32, sig_compact[:-1] + 'x')
+    # c_ecdsa_recover_compact(msg32, 'x' + sig_compact[1:])  # CORE DUMPS
 
 
 def test_der():
     sig_der = c_ecdsa_sign_der(msgN, priv)
     assert isinstance(sig_der, bytes)
     p3 = c_ecdsa_recover_der(msgN, sig_der)
-    assert p3 == pub.encode('hex')
+    assert p3 == pub
     p2 = b_ecdsa_recover_der(msgN, sig_der)
     assert p2 == pub.encode('hex')
-
-    assert encode_pubkey(p3, 'bin') == pub
-    assert c_ecdsa_verify_der(msg32, sig_der, p3)
+    assert c_ecdsa_verify_der(msgN, sig_der, pub)
 
     # check wrong pub
-    # p4 = c_ecdsa_recover_der(msg32, 'x' + vrs_compact[1:])
+    with pytest.raises(InvalidPubkeyError):
+        c_ecdsa_verify_der(msgN, sig_der, _tampered_65b(pub))
 
-    # assert encode_pubkey(p4, 'bin') != pub
-    # assert not c_ecdsa_verify_der(msg32, rsig, p4)
-    # assert not c_ecdsa_verify_der(msg32, psig, p4)
 
 # Recovery with pure python solution
-
 
 def test_ecrecover(rounds=100):
     vrs1 = b_ecdsa_raw_sign(msg32, priv)
