@@ -50,7 +50,7 @@ def test_raw():
     assert c_ecdsa_verify_raw(msg32, vrs1, p3)
 
     # check wrong pub
-    sig_vrs2 = c_ecdsa_sign_raw(msg32, 'x'*32)
+    sig_vrs2 = c_ecdsa_sign_raw(msg32, 'x' * 32)
     p2 = c_ecdsa_recover_raw(msg32, sig_vrs2)
     assert p2 != pub
 
@@ -94,6 +94,7 @@ def test_robustness():
     with pytest.raises(InvalidSignatureError):
         c_ecdsa_recover_compact(msg32, sig_compact[:-1] + 'x')
     c_ecdsa_recover_compact(msg32, 'Y' + sig_compact[1:])  # CORE DUMPS
+    c_ecdsa_recover_compact(msg32, 'x' + sig_compact[1:])  # CORE DUMPS
 
 
 def test_der():

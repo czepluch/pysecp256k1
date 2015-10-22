@@ -4,6 +4,8 @@ import random
 from bitcoin import electrum_sig_hash as _b_electrum_sig_hash
 from bitcoin import encode_sig as _b_encode_sig
 from bitcoin import decode_sig as _b_decode_sig
+from bitcoin import N, P
+secpk1n = 115792089237316195423570985008687907852837564279074904382605163141518161494337
 
 try:
     from ._c_secp256k1 import ffi
@@ -183,6 +185,15 @@ def _parse_to_recoverable_signature(sig):
     return rec_sig
 
 
+def _check_signature(sig_compact):
+    if not len(sig_compact) == 65:
+        raise InvalidSignatureError()
+    v, r, s = _decode_sig(sig_compact)
+    if r >= N or s >= P or v < 27 or v > 28 or r == 0 or s == 0 or s >= secpk1n:
+        raise InvalidSignatureError()
+    if not (r < secpk1n and s < secpk1n and (v == 27 or v == 28)):
+        raise InvalidSignatureError()
+
 # compact encoding
 
 
@@ -216,6 +227,7 @@ def ecdsa_recover_compact(msg32, sig):
     """
     assert isinstance(msg32, bytes)
     assert len(msg32) == 32
+    _check_signature(sig)
     # Check that recid is of valid value
     recid = _big_endian_to_int(sig[64])
 
@@ -249,6 +261,7 @@ def ecdsa_verify_compact(msg32, sig, pub):
     assert isinstance(msg32, bytes)
     assert len(msg32) == 32
     assert len(pub) == 65
+    _check_signature(sig)
 
     # Setting the pubkey array
     c_sig = ffi.new("secp256k1_ecdsa_signature *")
