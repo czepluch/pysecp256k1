@@ -105,30 +105,30 @@ def _serialize_pubkey(pub):
 def _der_deserialize_signature(in_sig):
     sig = ffi.new("secp256k1_ecdsa_signature *")
     # Return 1 when signature could be parsed
-    valid_pub = lib.secp256k1_ecdsa_signature_parse_der(
+    valid_sig = lib.secp256k1_ecdsa_signature_parse_der(
         ctx,        # const secp256k1_context*
         sig,        # secp256k1_ecdsa_signature*
         in_sig,     # const unsigned char
-        len(pub)    # size_t
+        len(in_sig)    # size_t
     )
     if not valid_sig:
         raise InvalidSignatureError()
     return sig
 
 
-def _der_serialize_pubkey(sig):
-    serialized_pubkey = ffi.new("unsigned char[65]")
+def _der_serialize_signature(sig):
+    serialized_sig = ffi.new("unsigned char[65]")
     outputlen = ffi.new("size_t *")
 
     # Serialize a pubkey object into a serialized byte sequence.
-    lib.secp256k1_ecdsa_signature_serialize_der(
+    serializeable = lib.secp256k1_ecdsa_signature_serialize_der(
         ctx,
-        serialized_pubkey,
+        serialized_sig,
         outputlen,
         sig,                # secp256k1_ecdsa_signature *
-        0  # SECP256K1_EC_COMPRESSED
     )
-    return serialized_pubkey
+    assert serializeable == 1
+    return serialized_sig
 
 
 def _ecdsa_sign_recoverable(msg32, seckey):

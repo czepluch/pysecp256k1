@@ -12,6 +12,7 @@ from c_secp256k1 import ecdsa_sign_compact as c_ecdsa_sign_compact
 from c_secp256k1 import ecdsa_verify_compact as c_ecdsa_verify_compact
 from c_secp256k1 import ecdsa_sign_raw as c_ecdsa_sign_raw
 from c_secp256k1 import ecdsa_recover_raw as c_ecdsa_recover_raw
+from c_secp256k1 import ecdsa_verify_raw as c_ecdsa_verify_raw
 from c_secp256k1 import ecdsa_sign_der as c_ecdsa_sign_der
 from c_secp256k1 import ecdsa_recover_der as c_ecdsa_recover_der
 from c_secp256k1 import ecdsa_verify_der as c_ecdsa_verify_der
@@ -48,11 +49,14 @@ def test_raw():
     # verify
     assert c_ecdsa_verify_raw(msg32, vrs1, p3)
 
-    # verify wrong pub
-    assert wrong_vrs[20] != 'E'
-    false_vrs = wrong_vrs[:20] + 'E' + wrong_vrs[21:]
+    # check wrong pub
+    sig_vrs2 = c_ecdsa_sign_raw(msg32, 'x'*32)
+    p2 = c_ecdsa_recover_raw(msg32, sig_vrs2)
+    assert p2 != pub
 
-    assert not c_ecdsa_verify_raw(msg32, false_vrs, p2)
+    # check wrong sig
+    false_sig_vrs = sig_vrs2
+    assert not c_ecdsa_verify_raw(msg32, false_sig_vrs, pub)
 
 
 def _tampered_65b(b):
@@ -89,7 +93,7 @@ def test_robustness():
     c_ecdsa_recover_compact(msg32, _tampered_65b(sig_compact))
     with pytest.raises(InvalidSignatureError):
         c_ecdsa_recover_compact(msg32, sig_compact[:-1] + 'x')
-    # c_ecdsa_recover_compact(msg32, 'x' + sig_compact[1:])  # CORE DUMPS
+    c_ecdsa_recover_compact(msg32, 'Y' + sig_compact[1:])  # CORE DUMPS
 
 
 def test_der():
