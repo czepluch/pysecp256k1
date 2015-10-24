@@ -189,10 +189,11 @@ def _check_signature(sig_compact):
     if not len(sig_compact) == 65:
         raise InvalidSignatureError()
     v, r, s = _decode_sig(sig_compact)
-    if r >= N or s >= P or v < 27 or v > 28 or r == 0 or s == 0 or s >= secpk1n:
+    if r >= N or s >= P or v < 27 or v > 28 or r < 1 or s < 1 or s >= secpk1n:
         raise InvalidSignatureError()
     if not (r < secpk1n and s < secpk1n and (v == 27 or v == 28)):
         raise InvalidSignatureError()
+
 
 # compact encoding
 
