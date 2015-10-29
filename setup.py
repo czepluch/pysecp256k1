@@ -15,7 +15,7 @@ from setuptools.dist import Distribution
 
 PACKAGE_NAME = "c_secp256k1"
 
-TARBALL_URL = "https://github.com/bitcoin/secp256k1/tarball/master"
+TARBALL_URL = "https://github.com/bitcoin/secp256k1/tarball/96be20463f62ec6f97927cdd43bf439d19b9ee1a"
 
 LIB_SECP256K1_DIR = "lib-secp256k1"
 
