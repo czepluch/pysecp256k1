@@ -93,8 +93,6 @@ def test_robustness():
     c_ecdsa_recover_compact(msg32, _tampered_65b(sig_compact))
     with pytest.raises(InvalidSignatureError):
         c_ecdsa_recover_compact(msg32, sig_compact[:-1] + 'x')
-    c_ecdsa_recover_compact(msg32, 'Y' + sig_compact[1:])  # CORE DUMPS
-    c_ecdsa_recover_compact(msg32, 'x' + sig_compact[1:])  # CORE DUMPS
 
 
 def test_der():

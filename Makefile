@@ -20,6 +20,7 @@ clean-build:
 	rm -rf c_secp256k1/*.pyd
 	rm -rf c_secp256k1/_c_secp256k1.py
 	rm -rf lib-secp256k1
+	rm -rf bitcoin-secp256k1-*
 
 clean-pyc:
 	find . -name '*.pyc' -exec rm -f {} +
