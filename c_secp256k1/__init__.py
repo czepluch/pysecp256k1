@@ -261,6 +261,10 @@ def ecdsa_verify_compact(msg32, sig, pub):
     """
     assert isinstance(msg32, bytes)
     assert len(msg32) == 32
+    # Check if pubkey has been bin_electrum encoded.
+    # If so, append \04 to the front of the key, to make sure the length is 65
+    if len(pub) == 64:
+        pub = '\04'+pub
     assert len(pub) == 65
     _check_signature(sig)
 
@@ -309,8 +313,11 @@ def ecdsa_verify_raw(msg32, vrs, pub):
         Takes a message, the signature being verified and a pubkey
         Returns 1 if signature is valid with given pubkey
     """
-    assert len(vrs) == 3
-    return ecdsa_verify_compact(msg32, _encode_sig(*vrs), pub)
+    # assert len(vrs) == 3
+    if len(vrs) == 3:
+        return ecdsa_verify_compact(msg32, _encode_sig(*vrs), pub)
+    else:
+        return ecdsa_verify_compact(msg32, vrs, pub)
 
 # DER encoding
 

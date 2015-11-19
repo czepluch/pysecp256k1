@@ -47,6 +47,10 @@ def test_raw():
     assert encode_pubkey(p2, 'bin') != pub
 
     # verify
+    p6 = encode_pubkey(p3, 'bin_electrum')
+    assert c_ecdsa_verify_raw(msg32, vrs1, p6)
+    p7 = encode_pubkey(p6, 'bin')
+    assert c_ecdsa_verify_raw(msg32, vrs1, p7)
     assert c_ecdsa_verify_raw(msg32, vrs1, p3)
 
     # check wrong pub
