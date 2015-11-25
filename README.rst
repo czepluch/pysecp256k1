@@ -8,13 +8,15 @@ These results are achieved on an Intel Core i5-4200U CPU @ 1.6GHz::
 
     cffi took: 1.09secs / 109μs per op  / 9170 recovers per sec
 
-..Usage
-..-----
-..This library offers sign and recover from the secp256k1 bitcoin lib used like this::
+Usage
+-----
+This library offers sign, recover and verify from the secp256k1 bitcoin lib used like this::
 
-    ..sig = secp256k1_ecdsa_sign(msg32, seckey)
+    sig = ecdsa_sign_raw(msg32, seckey)
 
-    ..pubkey = secp256k1_ecdsa_recover(msg32, sig)
+    pubkey = ecdsa_recover_raw(msg32, sig)
+
+    ecdsa_verify_raw(msg32, sig, pubkey)
 
 Dependencies
 ------------
