@@ -22,6 +22,14 @@ Clone repo::
 
     git clone https://github.com/czepluch/pysecp256k1.git
 
+
+Dependencies
+------------
+On Ubuntu::
+
+    $ sudo apt-get install libssl-dev libffi-dev libtool
+
+
 Development
 -----------
 
