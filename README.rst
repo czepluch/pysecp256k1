@@ -12,7 +12,7 @@ Usage
 -----
 This library offers sign, recover and verify from the secp256k1 bitcoin lib used like this::
 
-    sig = ecdsa_sign_raw(msg32, seckey)
+    sign = ecdsa_sign_raw(msg32, seckey)
 
     pubkey = ecdsa_recover_raw(msg32, sig)
 
@@ -22,7 +22,7 @@ Dependencies
 ------------
 On Ubuntu::
 
-    $ sudo apt-get install libssl-dev libffi-dev libtool
+    $ sudo apt-get install libssl-dev libffi-dev libtool python-dev autoconf
 
 
 Installation
