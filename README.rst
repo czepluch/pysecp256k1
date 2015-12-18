@@ -22,7 +22,7 @@ Dependencies
 ------------
 On Ubuntu::
 
-    $ sudo apt-get install libssl-dev libffi-dev libtool python-dev autoconf
+    $ sudo apt-get install libssl-dev libffi-dev libtool python-dev autoconf automake
 
 
 Installation
