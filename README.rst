@@ -22,7 +22,11 @@ Dependencies
 ------------
 On Ubuntu::
 
+    # install dependencies
     $ sudo apt-get install libssl-dev libffi-dev libtool python-dev autoconf automake
+
+    # test dependencies
+    $ sudo apt-get install python-tox
 
 
 Installation
