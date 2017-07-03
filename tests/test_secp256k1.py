@@ -19,10 +19,10 @@ from c_secp256k1 import ecdsa_verify_der as c_ecdsa_verify_der
 from c_secp256k1 import InvalidPubkeyError, InvalidSignatureError
 
 
-priv = ''.join(chr(random.randint(0, 255)) for i in range(32))
+priv = bytes(bytearray(random.getrandbits(8) for _ in range(32)))
 pub = privtopub(priv)
-msg32 = ''.join(chr(random.randint(0, 255)) for i in range(32))
-msgN = ''.join(chr(random.randint(0, 255)) for i in range(128))
+msg32 = bytes(bytearray(random.getrandbits(8) for _ in range(32)))
+msgN = bytes(bytearray(random.getrandbits(8) for _ in range(128)))
 
 
 def test_raw():
@@ -42,7 +42,7 @@ def test_raw():
     assert encode_pubkey(p5, 'bin') == pub
 
     # check wrong pub
-    wrong_vrs = c_ecdsa_sign_raw(msg32, 'x' * 32)
+    wrong_vrs = c_ecdsa_sign_raw(msg32, b'x' * 32)
     p2 = c_ecdsa_recover_raw(msg32, wrong_vrs)
     assert encode_pubkey(p2, 'bin') != pub
 
@@ -54,7 +54,7 @@ def test_raw():
     assert c_ecdsa_verify_raw(msg32, vrs1, p3)
 
     # check wrong pub
-    sig_vrs2 = c_ecdsa_sign_raw(msg32, 'x' * 32)
+    sig_vrs2 = c_ecdsa_sign_raw(msg32, b'x' * 32)
     p2 = c_ecdsa_recover_raw(msg32, sig_vrs2)
     assert p2 != pub
 
@@ -65,8 +65,8 @@ def test_raw():
 
 def _tampered_65b(b):
     assert len(b) == 65
-    assert b[20] != 'E'
-    return b[:20] + 'E' + b[21:]
+    assert b[20:21] != b'E'
+    return b[:20] + b'E' + b[21:]
 
 
 def test_compact():
@@ -82,7 +82,7 @@ def test_compact():
     assert c_ecdsa_verify_compact(msg32, sig_compact, pub)
 
     # check wrong pub
-    sig_compact_2 = c_ecdsa_sign_compact(msg32, 'x' * 32)
+    sig_compact_2 = c_ecdsa_sign_compact(msg32, b'x' * 32)
     p4 = c_ecdsa_recover_compact(msg32, sig_compact_2)
     assert p4 != pub
 
@@ -96,16 +96,23 @@ def test_robustness():
     # must not segfault
     # c_ecdsa_recover_compact(msg32, _tampered_65b(sig_compact))
     with pytest.raises(InvalidSignatureError):
-        c_ecdsa_recover_compact(msg32, sig_compact[:-1] + 'x')
+        c_ecdsa_recover_compact(msg32, sig_compact[:-1] + b'x')
+
+
+if hasattr(bytes, 'hex'):
+    _to_hex = bytes.hex
+else:
+    def _to_hex(b):
+        return b.encode('hex')
 
 
 def test_der():
     sig_der = c_ecdsa_sign_der(msgN, priv)
-    assert isinstance(sig_der, bytes)
+    assert isinstance(sig_der, str)
     p3 = c_ecdsa_recover_der(msgN, sig_der)
     assert p3 == pub
     p2 = b_ecdsa_recover_der(msgN, sig_der)
-    assert p2 == pub.encode('hex')
+    assert p2 == _to_hex(pub)
     assert c_ecdsa_verify_der(msgN, sig_der, pub)
 
     # check wrong pub
@@ -121,8 +128,8 @@ def test_ecrecover(rounds=100):
     for i in range(rounds):
         p = b_ecdsa_raw_recover(msg32, vrs1)
     elapsed = time.time() - st
-    print 'py took: %.2fsecs / %dμs per op / %d recoveries per sec' % \
-        (elapsed, elapsed / rounds * 10**6, rounds / elapsed)
+    print('py took: %.2fsecs / %dμs per op / %d recoveries per sec' % \
+        (elapsed, elapsed / rounds * 10**6, rounds / elapsed))
 
 
 # Recovery with same random private key using cffi
@@ -132,13 +139,13 @@ def test_cecrecover(rounds=100):
     for i in range(rounds):
         p = c_ecdsa_recover_compact(msg32, vrs_compact)
     elapsed = time.time() - st
-    print 'cffi took: %.2fsecs / %dμs per op  / %d recoveries per sec' % \
-        (elapsed, elapsed / rounds * 10**6, rounds / elapsed)
-    print 'c  takes: 300μs per op / 3000 recoveries per sec'  # c wraped in go, according to gustav
+    print('cffi took: %.2fsecs / %dμs per op  / %d recoveries per sec' % \
+        (elapsed, elapsed / rounds * 10**6, rounds / elapsed))
+    print('c  takes: 300μs per op / 3000 recoveries per sec')  # c wraped in go, according to gustav
 
 
 def rand32bytes():
-    return ''.join(chr(random.randint(0, 255)) for i in range(32))
+    return bytes(bytearray(random.getrandbits(8) for _ in range(32)))
 
 
 def perf(rounds=1000):
@@ -151,8 +158,8 @@ def perf(rounds=1000):
         s = c_ecdsa_sign_compact(msg32, priv)
         signatures.append(s)
     elapsed = time.time() - st
-    print 'cffi took: %.2fsecs / %dμs per op  / %d signs per sec' % \
-        (elapsed, elapsed / rounds * 10**6, rounds / elapsed)
+    print('cffi took: %.2fsecs / %dμs per op  / %d signs per sec' % \
+        (elapsed, elapsed / rounds * 10**6, rounds / elapsed))
 
     # test recover
     pubs = []
@@ -161,8 +168,8 @@ def perf(rounds=1000):
         p = c_ecdsa_recover_compact(msg32, sig)
         pubs.append(p)
     elapsed = time.time() - st
-    print 'cffi took: %.2fsecs / %dμs per op  / %d recovers per sec' % \
-        (elapsed, elapsed / rounds * 10**6, rounds / elapsed)
+    print('cffi took: %.2fsecs / %dμs per op  / %d recovers per sec' % \
+        (elapsed, elapsed / rounds * 10**6, rounds / elapsed))
 
     # check
     for pub, privkey in zip(pubs, privkeys)[:100]:

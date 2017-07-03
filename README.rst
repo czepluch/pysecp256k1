@@ -1,4 +1,4 @@
-Bitcoin secp256k1 C library wrapped with CFFI to use with Python2 and PyPy2.
+Bitcoin secp256k1 C library wrapped with CFFI.
 
 Benchmarks
 ----------

@@ -4,9 +4,16 @@ from glob import glob
 import os
 import shutil
 import tarfile
-from cStringIO import StringIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import BytesIO as StringIO
 from setuptools import setup, find_packages
-from urllib2 import urlopen, URLError
+try:
+    from urllib2 import urlopen, URLError
+except ImportError:
+    from urllib.request import urlopen
+    from urllib.error import URLError
 from setuptools.command.sdist import sdist
 from setuptools.command.test import test as TestCommand
 from distutils.command.build_ext import build_ext as distutils_build_ext
@@ -122,6 +129,8 @@ setup(
     classifiers=[
         "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: Implementation :: PyPy"
     ],
     cmdclass={

@@ -1,6 +1,16 @@
+import numbers
+import struct
 from glob import glob
 from os import path
-import random
+try:
+    from secrets import SystemRandom
+    random = SystemRandom()
+except ImportError:
+    try:
+        from random import SystemRandom
+        random = SystemRandom()
+    except ImportError:
+        import random
 from bitcoin import electrum_sig_hash as _b_electrum_sig_hash
 from bitcoin import encode_sig as _b_encode_sig
 from bitcoin import decode_sig as _b_decode_sig
@@ -24,7 +34,7 @@ lib = ffi.dlopen(obj_name)
 # ffi definition of the context
 ctx = lib.secp256k1_context_create(3)
 # arbitrary data used by the nonce generation function
-ndata = ffi.new("unsigned char[]", ''.join(chr(random.randint(0, 255)) for i in range(32)))
+ndata = ffi.new("unsigned char[]", bytes(bytearray(random.getrandbits(8) for _ in range(32))))
 
 # helpers
 
@@ -40,33 +50,35 @@ class InvalidSignatureError(Exception):
 class InvalidPrivateKeyError(Exception):
     pass
 
+if hasattr(int, 'to_bytes'):
+    def _int_to_big_endian32(value):
+        return value.to_bytes(32, byteorder='big')
+else:
+    def _int_to_big_endian32(value):
+        cs = []
+        while value > 0:
+            cs.append(chr(value % 256))
+            value /= 256
+        s = b''.join(reversed(cs))
+        return b'\x00' * (32 - len(s)) + s
 
-def _int_to_big_endian(value):
-    cs = []
-    while value > 0:
-        cs.append(chr(value % 256))
-        value /= 256
-    s = ''.join(reversed(cs))
-    return s
-
-
-def _big_endian_to_int(value):
-    return int(value.encode('hex'), 16)
-
-
-def _lzpad32(x):
-    return '\x00' * (32 - len(x)) + x
+if hasattr(int, 'from_bytes'):
+    def _big_endian_to_int(value):
+        return int.from_bytes(value, byteorder='big')
+else:
+    def _big_endian_to_int(value):
+        return int(value.encode('hex'), 16)
 
 
 def _encode_sig(v, r, s):
-    assert isinstance(v, (int, long))
+    assert isinstance(v, numbers.Integral)
     assert v in (27, 28)
-    vb, rb, sb = chr(v - 27), _int_to_big_endian(r), _int_to_big_endian(s)
-    return _lzpad32(rb) + _lzpad32(sb) + vb
+    vb, rb, sb = bytes(bytearray((v - 27,))), _int_to_big_endian32(r), _int_to_big_endian32(s)
+    return rb + sb + vb
 
 
 def _decode_sig(sig):
-    return ord(sig[64]) + 27, _big_endian_to_int(sig[0:32]), _big_endian_to_int(sig[32:64])
+    return ord(sig[64:65]) + 27, _big_endian_to_int(sig[0:32]), _big_endian_to_int(sig[32:64])
 
 
 def _verify_seckey(seckey):
@@ -169,7 +181,7 @@ def _parse_to_recoverable_signature(sig):
     # Make a recoverable signature of 65 bytes
     rec_sig = ffi.new("secp256k1_ecdsa_recoverable_signature *")
     # Retrieving the recid from the last byte of the signed key
-    recid = ord(sig[64])
+    recid = ord(sig[64:65])
 
     # Parse a revoverable signature
     parsable_sig = lib.secp256k1_ecdsa_recoverable_signature_parse_compact(
@@ -216,7 +228,7 @@ def ecdsa_sign_compact(msg32, seckey):
     )
 
     # Assign recid to the last byte in the output array
-    r = ffi.buffer(output64)[:64] + chr(recid[0])
+    r = ffi.buffer(output64)[:64] + struct.pack("B", recid[0])
     assert len(r) == 65, len(r)
     return r
 
@@ -230,7 +242,7 @@ def ecdsa_recover_compact(msg32, sig):
     assert len(msg32) == 32
     _check_signature(sig)
     # Check that recid is of valid value
-    recid = _big_endian_to_int(sig[64])
+    recid = ord(sig[64:65])
 
     if not (recid >= 0 and recid <= 3):
         raise InvalidSignatureError()
@@ -264,7 +276,7 @@ def ecdsa_verify_compact(msg32, sig, pub):
     # Check if pubkey has been bin_electrum encoded.
     # If so, append \04 to the front of the key, to make sure the length is 65
     if len(pub) == 64:
-        pub = '\04'+pub
+        pub = b'\04'+pub
     assert len(pub) == 65
     _check_signature(sig)
 

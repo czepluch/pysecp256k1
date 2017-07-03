@@ -3,6 +3,7 @@ sudo: false
 env:
   matrix:
     - TOXENV=py27
+    - TOXENV=py35
     - TOXENV=pypy
 
 addons:
