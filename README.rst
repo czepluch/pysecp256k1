@@ -1,3 +1,5 @@
+This library is no longer maintained since https://github.com/ofek/coincurve became the goto library for this
+
 Bitcoin secp256k1 C library wrapped with CFFI.
 
 Benchmarks
